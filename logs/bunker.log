@@ -1,0 +1,1 @@
+2026-04-24 23:38:46.457 | INFO     | bunker:handle_event:28 - Event from berserk_checker: STATUS - ok | PAYLOAD - {'message': 'No new chapter.', 'chapter': 383}

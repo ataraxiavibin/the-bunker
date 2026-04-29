@@ -13,7 +13,6 @@ def connect_headphones() -> bool:
     if "Connection successful" in result.stdout:
         return True # here call to a log/transmitter function
 
-    print(f"Failed to connect.") # here call to a log/transmitter function
     return False
 
 

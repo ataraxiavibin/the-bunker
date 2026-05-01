@@ -72,10 +72,9 @@ def check(destination="bunker"):
         if chapter:
             attributes = chapter.get("attributes", {})
 
-            ch_num = int(attributes.get("chapter", 0)) # attention - 0 as a default value will always make the programm think it's a new chapter.
-                                                       # needed to exclude ValueError possibility. may be a better way to handle.
+            ch_num = float(attributes.get("chapter", 0))    # attention - 0 as a default value will always make the programm think it's a new chapter.
+                                                            # needed to exclude ValueError possibility. may be a better way to handle.
 
-                                                       # there also may be an edge-case like "Chapter 383.1", which this logic does not handle properly.
             publish_date = attributes.get("publishAt", "Unknown")
     else: 
         raise ConnectionError(f"Couldn't access the API, status code - {request.status_code}")

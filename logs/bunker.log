@@ -1,1 +1,5 @@
 2026-04-24 23:38:46.457 | INFO     | bunker:handle_event:28 - Event from berserk_checker: STATUS - ok | PAYLOAD - {'message': 'No new chapter.', 'chapter': 383}
+2026-05-01 17:26:37.136 | INFO     | bunker:handle_event:28 - Event from berserk_checker: STATUS - ok | PAYLOAD - {'message': 'No new chapter.', 'chapter': 383}
+2026-05-01 18:53:38.762 | INFO     | bunker:handle_event:28 - Event from berserk_checker: STATUS - ok | PAYLOAD - {'message': 'No new chapter.', 'chapter': 383}
+2026-05-01 18:57:44.748 | INFO     | bunker:handle_event:28 - Event from berserk_checker: STATUS - ok | PAYLOAD - {'message': 'No new chapter.', 'chapter': 383}
+2026-05-01 18:58:18.019 | INFO     | bunker:handle_event:28 - Event from berserk_checker: STATUS - ok | PAYLOAD - {'message': 'No new chapter.', 'chapter': 383}

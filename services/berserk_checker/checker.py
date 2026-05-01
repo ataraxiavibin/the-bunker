@@ -50,7 +50,7 @@ def save_cache(chapter: int, time_published: str, times_ran: int) -> None: # wri
         json.dump(data, file)
 
 
-def main():
+def check(destination="bunker"):
     try:
         cache = load()
     except ValueError as e:
@@ -82,21 +82,40 @@ def main():
 
     last_ch = cache.get("chapter", None)
 
+    # if destination == "bot":
+    #     return {}
+    # else:
+    #     if not last_ch:
+    #         msg = f"First run. Keeping track of chapter {ch_num}"
+    #         print(f"LOG: {msg}")
+    #         send_to_bunker(SOURCE, "ok", {"message": msg, "chapter": ch_num})
+    #     elif ch_num > last_ch:
+    #         msg = f"Chapter {ch_num} is out!"
+    #         print(f"LOG: {msg}") 
+    #         send_to_bunker(SOURCE, "ok", {"message": msg, "chapter": ch_num})
+    #     elif ch_num == last_ch:
+    #         msg = "No new chapter."
+    #         send_to_bunker(SOURCE, "ok", {"message": msg, "chapter": ch_num})
+    #         pass
+
     if not last_ch:
         msg = f"First run. Keeping track of chapter {ch_num}"
-        print(f"LOG: {msg}")
-        send_to_bunker(SOURCE, "ok", {"message": msg, "chapter": ch_num})
     elif ch_num > last_ch:
         msg = f"Chapter {ch_num} is out!"
-        print(f"LOG: {msg}") 
-        send_to_bunker(SOURCE, "ok", {"message": msg, "chapter": ch_num})
-    elif ch_num == last_ch:
+    else:
         msg = "No new chapter."
-        send_to_bunker(SOURCE, "ok", {"message": msg, "chapter": ch_num})
-        pass
 
+    payload = {"message": msg, "chapter": ch_num}
+
+    if destination == "bot":
+        return payload
+    else:
+        send_to_bunker(SOURCE, "ok", payload)
+    
     save_cache(ch_num, publish_date, times_ran + 1)
 
 
+
+
 if __name__ == "__main__":
-    main()
+    check()

@@ -82,21 +82,6 @@ def check(destination="bunker"):
 
     last_ch = cache.get("chapter", None)
 
-    # if destination == "bot":
-    #     return {}
-    # else:
-    #     if not last_ch:
-    #         msg = f"First run. Keeping track of chapter {ch_num}"
-    #         print(f"LOG: {msg}")
-    #         send_to_bunker(SOURCE, "ok", {"message": msg, "chapter": ch_num})
-    #     elif ch_num > last_ch:
-    #         msg = f"Chapter {ch_num} is out!"
-    #         print(f"LOG: {msg}") 
-    #         send_to_bunker(SOURCE, "ok", {"message": msg, "chapter": ch_num})
-    #     elif ch_num == last_ch:
-    #         msg = "No new chapter."
-    #         send_to_bunker(SOURCE, "ok", {"message": msg, "chapter": ch_num})
-    #         pass
 
     if not last_ch:
         msg = f"First run. Keeping track of chapter {ch_num}"
@@ -107,14 +92,11 @@ def check(destination="bunker"):
 
     payload = {"message": msg, "chapter": ch_num}
 
-    if destination == "bot":
-        return payload
-    else:
-        send_to_bunker(SOURCE, "ok", payload)
-    
+    send_to_bunker(SOURCE, "ok", payload)
     save_cache(ch_num, publish_date, times_ran + 1)
 
-
+    if destination == "bot":
+        return payload
 
 
 if __name__ == "__main__":

@@ -29,6 +29,9 @@ async def handle_event(event: Event, x_token: str = Header(None)):
 
     return {"status": "accepted"}
 
+@app.get("/ping")
+async def health_check():
+    return {"status": "alive"}
 
 if __name__ == "__main__":
     import uvicorn

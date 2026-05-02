@@ -1,0 +1,1 @@
+- Not use requests library, use async analogue

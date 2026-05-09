@@ -54,7 +54,7 @@ def check(destination="bunker"):
     try:
         cache = load()
     except ValueError as e:
-        send_to_bunker(SOURCE, "error", {message: "{e}"})
+        send_to_bunker(SOURCE, "error", {"message": str(e)})
         print(f"ERROR: {e}.") # here call to a log/transmitter function
         cache = {}
 

@@ -11,9 +11,9 @@ MAC = "34:0E:22:C3:31:79"
 
 def run_bt_command(*args) -> str:
     result = subprocess.run(
-                            ['bluetoothctl', *args], 
-                            capture_output=True,
-                            text=True
+        ['bluetoothctl', *args], 
+        capture_output=True,
+        text=True
     )
     return result.stdout
 

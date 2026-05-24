@@ -41,16 +41,15 @@ async def cmd_start(message: types.Message):
 
 @dp.message(Command("chapter"))
 async def cmd_chapter(message: types.Message):
-    result = checker.check(destination="bot")   # this is not good, because:
-                                                # breaks the whole philosophy of a "one entry, one exit" system
-                                                # but it works right now, so i'll change it when i'll make bunker.py a real entrance, not just an exit.
-                                                # also what's the reason of async if this is not async
+    result = await asyncio.to_thread(checker.check, destination="bot")  # this is not good, because:
+                                                                        # breaks the whole philosophy of a "one entry, one exit" system
+                                                                        # but it works right now, so i'll change it when i'll make bunker.py a real entrance, not just an exit.
     await message.reply(f"{result["message"]} Current chapter: {result["chapter"]}.")
 
 
 @dp.message(F.text.lower() == "check bunker connection")
 async def check_connection(message: types.Message):
-    result = is_bunker_alive()
+    result = await asyncio.to_thread(is_bunker_alive)
 
     if result:
         await message.reply("Running!")

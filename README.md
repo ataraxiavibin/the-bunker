@@ -30,3 +30,7 @@ Requires a Linux machine.
 2. Fill in `.env` based on `.env.example`
 3. `pip install -r requirements.txt`
 4. `./run.sh` (`&>/dev/null &` recommended)
+
+# License
+
+This project is free software licensed under the GNU General Public License v3.0. See the (LICENSE)[LICENSE] file for details.

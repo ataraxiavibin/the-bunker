@@ -4,11 +4,8 @@
 
 import os
 import requests
-from pathlib import Path
 from dotenv import load_dotenv
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-env_path = BASE_DIR / ".env"
 load_dotenv()
 
 BUNKER_URL = os.environ.get("BUNKER_URL")

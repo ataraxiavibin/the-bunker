@@ -5,7 +5,7 @@
 - Add a bunker db:
   - transfer chapter checking logic to a bunker.
 
-  Summary: Bunker must be an "Orchestrator", the main source of truth.
+Summary: Bunker must be an "Orchestrator", the main source of truth.
 
 # Services / Shared
 - Not use requests library, use async analogue

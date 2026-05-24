@@ -1,12 +1,22 @@
-# Bunker:
-- Make a good Event Router
-- Code up a call function, so I can access services from a bot
-- Make it run together (TG Bot, Bunker)
-- Add a bunker db:
-  - transfer chapter checking logic to a bunker.
+# Bunker
+> Orchestrator — the single source of truth. Services report to it, it commands them back.
 
-Summary: Bunker must be an "Orchestrator", the main source of truth.
+### Now
+- [ ] Build a proper Event Router
+- [ ] Add outbound call function (so Bot can trigger services)
+- [ ] Run Bot + Bunker together in one process
+
+### Soon
+- [ ] Add Bunker DB
+  - [ ] Move chapter-checking logic into Bunker
+
+---
 
 # Services / Shared
-- Not use requests library, use async analogue
+- [ ] Replace `requests` with async alternative (`httpx`)
 
+### Berserk Checker
+- [ ] Local rate limiting (to not anger the Gods of webscraping)
+
+### Pods Connect
+- [ ] Add reconnect feature (disconnect+connect)

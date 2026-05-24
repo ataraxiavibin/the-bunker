@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # run.sh
 #
 # just auto-reload script when it changes

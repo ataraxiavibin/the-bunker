@@ -17,7 +17,7 @@ from services.berserk_checker import checker
 from shared.connection import is_bunker_alive
 
 load_dotenv()
-tokenbot = os.environ.get("TEST_BOTAPI") 
+tokenbot = os.environ.get("BOT_API") 
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=tokenbot)

@@ -19,9 +19,13 @@ class Event(BaseModel):
     status: str
     payload: Dict[str, Any]
 
+class Target(BaseModel):
+    service: str
+    action: str
+
 class Call(BaseModel):
     source: str
-    target: str
+    target: Target
 
 @app.post("/event")
 async def handle_event(event: Event, x_token: str = Header(...)):
@@ -38,9 +42,8 @@ async def handle_ping():
     return {"status": "alive"}
 
 @app.post("/call")
-async def handle_call():
-    pass
-
+async def handle_call(call: Call, x_token: str = Header(...)):
+    pass # here: call agent   
 
 if __name__ == "__main__":
     import uvicorn

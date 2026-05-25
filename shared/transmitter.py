@@ -22,3 +22,15 @@ def send_to_bunker(source: str, status: str, payload: Dict[str, Any]):
         response.raise_for_status()
     except Exception as e:
         print(f"Failed to send event to bunker: {e}")
+
+def call_to_bunker(source: str, target: Dict[str, str]):
+    headers = {"x-token": API_TOKEN}
+    data = {
+        "source": source,
+        "target": target
+    }
+
+        response = requests.post(BUNKER_URL+"/event", json=data, headers=headers, timeout=5)
+        response.raise_for_status()
+    except Exception as e:
+        print(f"Failed to send event to bunker: {e}")

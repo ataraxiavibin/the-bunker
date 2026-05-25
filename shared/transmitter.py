@@ -37,7 +37,7 @@ def call_to_bunker(source: str, target: Dict[str, str]):
     }
 
     try:
-        response = requests.post(BUNKER_URL+"/event", json=data, headers=headers, timeout=5)
+        response = requests.post(BUNKER_URL+"/call", json=data, headers=headers, timeout=5)
         response.raise_for_status()
     except Exception as e:
         logger.warning(f"Failed to send call to bunker: {e}")

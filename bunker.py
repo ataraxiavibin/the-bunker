@@ -37,11 +37,6 @@ async def handle_event(event: Event, x_token: str = Header(...)):
 async def handle_ping():
     return {"status": "alive"}
 
-@app.post("/call")
-async def handle_call():
-    pass
-
-
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=5050)

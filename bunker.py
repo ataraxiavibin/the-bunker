@@ -44,7 +44,7 @@ async def handle_ping():
     return {"status": "alive"}
 
 @app.post("/call")
-async def handle_call(call: Call, request: Request, x_token: str = Header(...)):
+async def forward_call(call: Call, request: Request, x_token: str = Header(...)):
     if x_token != api_token:
         logger.warning(f"Failed auth attempt from {request.client.host}")
         raise HTTPException(status_code=403, detail="Forbidden")

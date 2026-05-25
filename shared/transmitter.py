@@ -24,4 +24,4 @@ def send_to_bunker(source: str, status: str, payload: Dict[str, Any]):
         response = requests.post(BUNKER_URL+"/event", json=data, headers=headers, timeout=5)
         response.raise_for_status()
     except Exception as e:
-        logger.warning(f"Failed to send event to bunker: {e}"
+        logger.warning(f"Failed to send event to bunker: {e}")

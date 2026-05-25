@@ -26,7 +26,7 @@ class Call(BaseModel):
 @app.post("/event")
 async def handle_event(event: Event, x_token: str = Header(...)):
     if x_token != api_token:
-        logger.warning(f"Failed auth attempt with token: {x_token}")
+        logger.warning(f"Failed auth attempt from {request.client.host}")
         raise HTTPException(status_code=403, detail="Forbidden")
 
     logger.info(f"Event from {event.source}: STATUS - {event.status} | PAYLOAD - {event.payload}")

@@ -1,7 +1,7 @@
 # bunker.py
 
 import os
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request
 from pydantic import BaseModel
 from typing import Dict, Any
 from dotenv import load_dotenv
@@ -28,7 +28,7 @@ class Call(BaseModel):
     target: Target
 
 @app.post("/event")
-async def handle_event(event: Event, x_token: str = Header(...)):
+async def handle_event(event: Event, x_token: str = Header(...), request: Request):
     if x_token != api_token:
         logger.warning(f"Failed auth attempt from {request.client.host}")
         raise HTTPException(status_code=403, detail="Forbidden")

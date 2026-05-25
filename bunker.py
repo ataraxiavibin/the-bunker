@@ -19,8 +19,12 @@ class Event(BaseModel):
     status: str
     payload: Dict[str, Any]
 
+class Call(BaseModel):
+    source: str
+    target: str
+
 @app.post("/event")
-async def handle_event(event: Event, x_token: str = Header(None)):
+async def handle_event(event: Event, x_token: str = Header(...)):
     if x_token != api_token:
         logger.warning(f"Failed auth attempt with token: {x_token}")
         raise HTTPException(status_code=403, detail="Forbidden")
@@ -30,8 +34,13 @@ async def handle_event(event: Event, x_token: str = Header(None)):
     return {"status": "accepted"}
 
 @app.get("/ping")
-async def health_check():
+async def handle_ping():
     return {"status": "alive"}
+
+@app.post("/call")
+async def handle_call():
+    pass
+
 
 if __name__ == "__main__":
     import uvicorn

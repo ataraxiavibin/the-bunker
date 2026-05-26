@@ -54,9 +54,10 @@ async def run_call(call: Call, request: Request, x_token: str = Header(...)):
                     text=True
                 )
 
-            return {"source": target.action+" via agent","status": "ok", "payload": result.stdout }
+            return {"source": target.action+" via agent","status": "ok", "payload": result.stdout } 
     else:
-        return {"source": call.source, "status": "error"}
+        return {"source": call.source, "status": "error"} 
+        # TODO: normalize JSON returns and make a standardized stdout system in services/agent.
 
 
 if __name__ == "__main__":

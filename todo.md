@@ -1,6 +1,9 @@
 # Bunker
 > Orchestrator — the single source of truth. Services report to it, it commands them back.
 
+### RIGHT NOW (DEV):
+- [ ] normalize JSON returns and make a standardized stdout system in services/agent.
+
 ### Now
 - [ ] Build a proper Event Router
 - [ ] Add outbound call function (so Bot can trigger services)

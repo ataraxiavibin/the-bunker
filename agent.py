@@ -5,7 +5,7 @@
 # just a test idea:
 # it will be a separate server from bunker, which purpose will solely be:
 # run local services and get the results back to bunker.
-# this way, every device can have their own local services and Bunker system can work with many different devices at the same time while not taking up much resources.
+# this way, every device can have their own local services and Bunker system can work with many different devices at the same time while not taking up many resources.
 
 import os
 from fastapi import FastAPI, Header, HTTPException

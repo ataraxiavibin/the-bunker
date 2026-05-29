@@ -17,7 +17,7 @@ api_token = os.environ.get("API_TOKEN")
 agent_url = os.environ.get("AGENT_URL")
 
 class Event(BaseModel):
-    source: str
+    service: str
     status: str
     payload: Dict[str, Any]
 
@@ -26,8 +26,15 @@ class Target(BaseModel):
     action: str
 
 class Call(BaseModel):
-    source: str
+    caller: str
     target: Target
+
+class Reply(BaseModel):
+    service: str
+    reply_to: str
+    status: str
+    payload: Dict[str, Any]
+
 
 @app.post("/event")
 async def handle_event(event: Event, request: Request, x_token: str = Header(...)):
@@ -35,7 +42,7 @@ async def handle_event(event: Event, request: Request, x_token: str = Header(...
         logger.warning(f"Failed auth attempt from {request.client.host}")
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    logger.info(f"Event from {event.source}: STATUS - {event.status} | PAYLOAD - {event.payload}")
+    logger.info(f"Event from {event.service}: STATUS - {event.status} | PAYLOAD - {event.payload}")
 
     return {"status": "accepted"}
 
@@ -49,11 +56,11 @@ async def forward_call(call: Call, request: Request, x_token: str = Header(...))
         logger.warning(f"Failed auth attempt from {request.client.host}")
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    logger.info(f"Call from {call.source} to {call.target.service}: ACTION - {call.target.action}")
+    logger.info(f"Call from {call.caller} to {call.target.service}: ACTION - {call.target.action}")
 
     headers = {"x-token": api_token}
     data = {
-        "source": call.source,
+        "caller": call.caller,
         "target": call.target.model_dump()
     }
 

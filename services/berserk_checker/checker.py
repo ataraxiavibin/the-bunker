@@ -9,7 +9,7 @@ from typing import TypedDict
 from pathlib import Path
 
 
-SOURCE = "berserk_checker"
+SERVICE_NAME = "berserk_checker"
 BASE_URL = "https://api.mangadex.org"
 CURRENT_DIR = Path(__file__).resolve().parent
 CACHE_FILE = CURRENT_DIR / "chapter.json"
@@ -54,7 +54,7 @@ def check(destination="bunker"):
     try:
         cache = load()
     except ValueError as e:
-        send_to_bunker(SOURCE, "error", {"message": str(e)})
+        send_to_bunker(SERVICE_NAME, "error", {"message": str(e)})
         print(f"ERROR: {e}.") # here call to a log/transmitter function
         cache = {}
 
@@ -91,7 +91,7 @@ def check(destination="bunker"):
 
     payload = {"message": msg, "chapter": ch_num}
 
-    send_to_bunker(SOURCE, "ok", payload)
+    send_to_bunker(SERVICE_NAME, "ok", payload)
     save_cache(ch_num, publish_date, times_ran + 1)
 
     if destination == "bot":

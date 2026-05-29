@@ -6,7 +6,7 @@ import subprocess
 import argparse
 from shared.transmitter import send_to_bunker
 
-SOURCE = "pods_connect"
+SERVICE_NAME = "pods_connect"
 MAC = "34:0E:22:C3:31:79"
 
 def run_bt_command(*args) -> str:
@@ -20,7 +20,7 @@ def run_bt_command(*args) -> str:
 
 def log_and_send(status: str, msg: str) -> bool:
     print(f"LOG: {msg}")
-    send_to_bunker(SOURCE, status, {"message": msg})
+    send_to_bunker(SERVICE_NAME, status, {"message": msg})
     
     return True # TODO: check if connection is valid and the bunker is online
     # TODO: maybe add log_and_send to a shared file, since it's gonna be widely used

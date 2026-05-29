@@ -13,10 +13,10 @@ load_dotenv()
 BUNKER_URL = os.environ.get("BUNKER_URL")
 API_TOKEN = os.environ.get("API_TOKEN") 
 
-def send_to_bunker(source: str, status: str, payload: Dict[str, Any]):
+def send_to_bunker(service: str, status: str, payload: Dict[str, Any]):
     headers = {"x-token": API_TOKEN}
     data = {
-        "source": source,
+        "service": service,
         "status": status,
         "payload": payload
     }
@@ -29,10 +29,10 @@ def send_to_bunker(source: str, status: str, payload: Dict[str, Any]):
 
     return True
 
-def call_to_bunker(source: str, target: Dict[str, str]):
+def call_to_bunker(service: str, target: Dict[str, str]):
     headers = {"x-token": API_TOKEN}
     data = {
-        "source": source,
+        "service": service,
         "target": target
     }
 

@@ -42,7 +42,6 @@ async def run_call(call: Call, request: Request, x_token: str = Header(...)):
     if x_token != api_token:
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    source_call = call.source
     target = call.target
 
     if target.service in MAPPINGS:
@@ -54,9 +53,12 @@ async def run_call(call: Call, request: Request, x_token: str = Header(...)):
                     text=True
                 )
 
-            return {"source": target.action+" via agent","status": "ok", "payload": result.stdout } 
+            return {"service": target.service, "reply_to": call.caller, "status": "ok", "payload": {"stdout": result.stdout}} 
+        else:
+            return {"service": target.service, "reply_to": call.caller, "status": "fatal", "payload": {"reason": f"Action {target.action} not found in {target.service} service."}} 
     else:
-        return {"source": call.source, "status": "error"} 
+        return {"service": target.service, "reply_to": call.caller, "status": "fatal", "payload": {"reason": "File not found"}} 
+
         # TODO: normalize JSON returns and make a standardized stdout system in services/agent.
 
 

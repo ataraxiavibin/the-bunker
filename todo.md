@@ -20,6 +20,7 @@
 
 ### Berserk Checker
 - [ ] Local rate limiting (to not anger the Gods of webscraping)
+- [ ] Track amount of days checking for a new chapter *(WHEN BUNKER WILL HANDLE LOGIC)*
 
 ### Pods Connect
 - [ ] Add reconnect feature (disconnect+connect)

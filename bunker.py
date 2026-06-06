@@ -1,7 +1,7 @@
 # bunker.py
 
 import os
-import requests # it's gonna be a little bit painful to switch to a new async library..
+import httpx
 from fastapi import FastAPI, Header, HTTPException, Request
 from pydantic import BaseModel
 from typing import Dict, Any
@@ -65,13 +65,21 @@ async def forward_call(call: Call, request: Request, x_token: str = Header(...))
     }
 
     try:
-        response = requests.post(agent_url+"/call", json=data, headers=headers, timeout=5)
-        response.raise_for_status()
-    except Exception as e:
+        async with httpx.AsyncClient() as client:
+            result = await client.post(
+                f"{agent_url}/call",
+                json=data,
+                headers=headers,
+                timeout=5.0
+            )
+    except httpx.HTTPXError as e:
         logger.warning(f"Couldn't reach agent.py: {e}")
-        return {"status": "error"}
+        return {"status": "fatal"}
+    except Exception as e:
+        logger.warning(f"Unexpected error: {e}")
+        return {"status": "fatal"}
 
-    return {"status": "forwarded"}
+    return {"status": "ok"}
 
 
 if __name__ == "__main__":

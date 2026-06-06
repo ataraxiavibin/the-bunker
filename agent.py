@@ -44,21 +44,77 @@ async def run_call(call: Call, request: Request, x_token: str = Header(...)):
 
     target = call.target
 
-    if target.service in MAPPINGS:
-        if target.action in MAPPINGS[target.service]["actions"]:
-            cmd = [sys.executable, "-m", MAPPINGS[target.service]["path"], target.action]
-            result = subprocess.run(
-                    cmd,
-                    capture_output=True,
-                    text=True
-                )
+    if target.service not in MAPPINGS:
+        return {
+                "service": target.service,
+                "reply_to": call.caller,
+                "status": "fatal",
+                "payload": {"reason": "File not found"}
+            } 
 
-            return {"service": target.service, "reply_to": call.caller, "status": "ok", "payload": {"stdout": result.stdout}} 
-        else:
-            return {"service": target.service, "reply_to": call.caller, "status": "fatal", "payload": {"reason": f"Action {target.action} not found in {target.service} service."}} 
-    else:
-        return {"service": target.service, "reply_to": call.caller, "status": "fatal", "payload": {"reason": "File not found"}} 
+    if target.action not in MAPPINGS[target.service]["actions"]:
+        return {
+            "service": target.service,
+            "reply_to": call.caller,
+            "status": "fatal",
+            "payload": {"reason": f"Action {target.action} not found in {target.service} service."}
+        } 
 
+    cmd = [sys.executable, "-m", MAPPINGS[target.service]["path"], target.action]
+
+    proc = None
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+
+        stdout_bytes, stderr_bytes = await asyncio.wait_for(
+            proc.communicate(),
+            timeout=20.0
+        )
+        stdout = stdout_bytes.decode("utf-8", errors="replace")
+        stderr = stderr_bytes.decode("utf-8", errors="replace")
+        returncode = proc.returncode
+    except asyncio.TimeoutError as e:
+        if proc:
+            try:
+                proc.kill()
+                await proc.wait()
+            except ProcessLookupError:
+                pass
+        return {
+            "service": target.service,
+            "reply_to": call.caller,
+            "status": "fatal",
+            "payload": {"reason": "Process execution timed out"}
+        }
+    except Exception as e:
+        if proc and proc.returncode is None:
+            try:
+                proc.kill()
+                await proc.wait()
+            except ProcessLookupError:
+                pass
+        return {
+            "service": target.service,
+            "reply_to": call.caller,
+            "status": "fatal",
+            "payload": {"reason": f"Execution error: {e}"}
+        }
+
+    status = "ok" if returncode == 0 else "error"
+    return {
+        "service": target.service,
+        "reply_to": call.caller,
+        "status": status,
+        "payload": {
+            "stdout": stdout,
+            "stderr": stderr,
+            "returncode": returncode
+        }
+    }
         # TODO: normalize JSON returns and make a standardized stdout system in services/agent.
 
 

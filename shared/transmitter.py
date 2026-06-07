@@ -38,7 +38,7 @@ async def send_to_bunker(service: str, status: str, payload: Dict[str, Any]):
 
     return True
 
-def call_to_bunker(service: str, target: Dict[str, str]):
+async def call_to_bunker(service: str, target: Dict[str, str]):
     headers = {"x-token": API_TOKEN}
     data = {
         "service": service,
@@ -46,8 +46,16 @@ def call_to_bunker(service: str, target: Dict[str, str]):
     }
 
     try:
-        response = requests.post(BUNKER_URL+"/call", json=data, headers=headers, timeout=5)
-        response.raise_for_status()
+        async with httpx.AsyncClient() as client:
+            r = await.client.post(
+                BUNKER_URL+"/call",
+                json=data,
+                headers=headers,
+                timeout=5
+            )
+    except httpx.HTTPError as e:
+        logger.warning(f"Couldn't reach Bunker: {e}")
+        return False
     except Exception as e:
         logger.warning(f"Failed to send call to bunker: {e}")
         return False

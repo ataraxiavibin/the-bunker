@@ -2,6 +2,7 @@
 # 
 # subprogramm to keep track of and check the latest Berserk chapter
 
+import asyncio
 import requests
 import json
 from shared.transmitter import send_to_bunker
@@ -23,14 +24,23 @@ class CacheData(TypedDict):
 
 def fetch():
     headers = {"User-Agent": "MangaTrackerCLI/1.0"}
-    id = "801513ba-a712-498c-8f57-cae55b38cc92"
+    manga_id = "801513ba-a712-498c-8f57-cae55b38cc92"
     params={
         "translatedLanguage[]": "en",
         "order[chapter]": "desc",
         "limit": 1
     }
+
+    r = requests.get(
+        f"{BASE_URL}/manga/{manga_id}/feed",
+        headers=headers,
+        params=params,
+        timeout=10
+    )
+
+    r.raise_for_status()
     
-    return requests.get(f"{BASE_URL}/manga/{id}/feed", headers=headers, params=params, timeout=10)
+    return r
 
 
 def load() -> CacheData: # loads json data
@@ -50,34 +60,33 @@ def save_cache(chapter: int, time_published: str, times_ran: int) -> None: # wri
         json.dump(data, file)
 
 
-def check(destination="bunker"):
+async def check(destination="bunker"):
     try:
         cache = load()
     except ValueError as e:
-        send_to_bunker(SERVICE_NAME, "error", {"message": str(e)})
+        await send_to_bunker(SERVICE_NAME, "error", {"message": str(e)})
         print(f"ERROR: {e}.") # here call to a log/transmitter function
         cache = {}
 
     times_ran = cache.get("times_ran", 0)
 
-    request = fetch()
+    try:
+        request = fetch()
+    except requests.RequestException as e:
+        raise ConnectionError(f"Couldn't access the API: {e}") from e
 
-    if request.status_code == 200:
-        data = request.json()
-        chapter = data.get("data", [])[0]
+    data = request.json()
+    chapter = data.get("data", [])[0]
 
-        ch_num = None
-        publish_date = None
+    ch_num = None
+    publish_date = None
 
-        if chapter:
-            attributes = chapter.get("attributes", {})
+    if chapter:
+        attributes = chapter.get("attributes", {})
 
-            ch_num = float(attributes.get("chapter", 0))    # attention - 0 as a default value will always make the programm think it's a new chapter.
-                                                            # needed to exclude ValueError possibility. may be a better way to handle.
-
-            publish_date = attributes.get("publishAt", "Unknown")
-    else: 
-        raise ConnectionError(f"Couldn't access the API, status code - {request.status_code}")
+        ch_num = float(attributes.get("chapter", 0))    # attention - 0 as a default value will always make the programm think it's a new chapter.
+                                                        # needed to exclude ValueError possibility. may be a better way to handle.
+        publish_date = attributes.get("publishAt", "Unknown")
 
     last_ch = cache.get("chapter", None)
 
@@ -91,7 +100,7 @@ def check(destination="bunker"):
 
     payload = {"message": msg, "chapter": ch_num}
 
-    send_to_bunker(SERVICE_NAME, "ok", payload)
+    await send_to_bunker(SERVICE_NAME, "ok", payload)
     save_cache(ch_num, publish_date, times_ran + 1)
 
     if destination == "bot":
@@ -99,4 +108,4 @@ def check(destination="bunker"):
 
 
 if __name__ == "__main__":
-    check()
+    asyncio.run(check())

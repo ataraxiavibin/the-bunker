@@ -1,6 +1,7 @@
 # transmitter.py
 
 import requests
+import httpx
 import os
 from typing import Dict, Any
 from dotenv import load_dotenv
@@ -13,7 +14,7 @@ load_dotenv()
 BUNKER_URL = os.environ.get("BUNKER_URL")
 API_TOKEN = os.environ.get("API_TOKEN") 
 
-def send_to_bunker(service: str, status: str, payload: Dict[str, Any]):
+async def send_to_bunker(service: str, status: str, payload: Dict[str, Any]):
     headers = {"x-token": API_TOKEN}
     data = {
         "service": service,
@@ -21,10 +22,18 @@ def send_to_bunker(service: str, status: str, payload: Dict[str, Any]):
         "payload": payload
     }
     try:
-        response = requests.post(BUNKER_URL+"/event", json=data, headers=headers, timeout=5)
-        response.raise_for_status()
+        async with httpx.AsyncClient() as client: 
+            r = await client.post(
+                BUNKER_URL+"/event",
+                json=data,
+                headers=headers,
+                timeout=5
+            )
+    except httpx.HTTPError as e:
+        logger.warning(f"Couldn't reach Bunker: {e}")
+        return False
     except Exception as e:
-        logger.warning(f"Failed to send event to bunker: {e}")
+        logger.warning(f"Unexpected error: {e}")
         return False
 
     return True

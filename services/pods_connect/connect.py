@@ -2,55 +2,54 @@
 #
 # connects to airpods
 
+import asyncio
 import subprocess
-import argparse
 from shared.transmitter import send_to_bunker
+from shared.parser import get_args
 
 SERVICE_NAME = "pods_connect"
 MAC = "34:0E:22:C3:31:79"
+BT_TIMEOUT = 8
 
-def run_bt_command(*args) -> str:
-    result = subprocess.run(
+def bt(*args) -> str:
+    return subprocess.run(
         ['bluetoothctl', *args], 
         capture_output=True,
-        text=True
-    )
-    return result.stdout
+        text=True,
+        timeout=BT_TIMEOUT
+    ).stdout
 
 
-def log_and_send(status: str, msg: str) -> bool:
+async def log_and_send(status: str, msg: str) -> None:
     print(f"LOG: {msg}")
-    send_to_bunker(SERVICE_NAME, status, {"message": msg})
+    await send_to_bunker(SERVICE_NAME, status, {"message": msg})
     
-    return True # TODO: check if connection is valid and the bunker is online
+    # TODO: mb check if connection is valid and the bunker is online
     # TODO: maybe add log_and_send to a shared file, since it's gonna be widely used
 
 
-def connect_headphones() -> bool:
-    return "Connection successful" in run_bt_command('connect', MAC)
+def connect() -> bool: return "Connection successful" in bt("connect", MAC)
+def disconnect() -> bool: return "Disconnection successful" in bt("disconnect", MAC)
+def reconnect() -> bool: bt("disconnect", MAC); return connect()
+def check_connection() -> bool: return MAC in bt("devices", "Connected") 
 
+ACTIONS = {
+    "connect": (connect, "Connected.", "Failed to connect."),
+    "disconnect": (disconnect, "Disconnected.", "Failed to disconnect."),
+    "reconnect": (reconnect, "Reconnect.", "Failed to reconnect.")
+} # tbh i hate how it logs no reason, but it works. 
 
-def disconnect_headphones() -> bool:
-    return "Disconnection successful" in run_bt_command('disconnect', MAC)
+async def main():
+    args = get_args(SERVICE_NAME, "bunker microservice to control bluetooth connection", list(ACTIONS))
+    
+    action = args.action or ("disconnect" if check_connection() else "connect")
+    # to be honest, this is a lot of "not explicit" architectural behaviour, this sucks.
 
+    fn, ok_msg, err_msg = ACTIONS[action]
+    success = fn()
 
-def check_connection() -> bool:
-    return MAC in run_bt_command('devices', 'Connected')
-
-def main():
-    if check_connection():
-        log_and_send("ok", "Already connected. Initiating disconnection.")
-
-        if disconnect_headphones():
-            log_and_send("ok", "Successfully disconnected.")
-        else:
-            log_and_send("warning", "Failed to disconnect.") 
-    else:
-        if connect_headphones():
-            log_and_send("ok", "Connection successful.")
-        else:
-            log_and_send("warning", "Failed to connect.")
+    await log_and_send("ok" if success else "error", ok_msg if success else err_msg)
   
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

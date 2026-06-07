@@ -2,6 +2,9 @@
 #
 # connects to airpods
 
+import os
+import sys
+import json
 import asyncio
 import subprocess
 from shared.transmitter import send_to_bunker
@@ -21,8 +24,16 @@ def bt(*args) -> str:
 
 
 async def log_and_send(status: str, msg: str) -> None:
-    print(f"LOG: {msg}")
-    await send_to_bunker(SERVICE_NAME, status, {"message": msg})
+    is_agent = os.environ.get("CALLED_BY_AGENT") == "1"
+    if is_agent:
+        print(json.dumps({
+            "service": SERVICE_NAME,
+            "status": status,
+            "message": msg 
+        }))
+    else:
+        print(f"LOG: {msg}")
+        await send_to_bunker(SERVICE_NAME, status, {"message": msg})
     
     # TODO: mb check if connection is valid and the bunker is online
     # TODO: maybe add log_and_send to a shared file, since it's gonna be widely used

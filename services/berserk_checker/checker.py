@@ -2,6 +2,8 @@
 # 
 # subprogramm to keep track of and check the latest Berserk chapter
 
+import os
+import sys
 import asyncio
 import requests
 import json
@@ -60,7 +62,7 @@ def save_cache(chapter: int, time_published: str, times_ran: int) -> None: # wri
         json.dump(data, file)
 
 
-async def check(destination="bunker"):
+async def check():
     try:
         cache = load()
     except ValueError as e:
@@ -100,11 +102,17 @@ async def check(destination="bunker"):
 
     payload = {"message": msg, "chapter": ch_num}
 
-    await send_to_bunker(SERVICE_NAME, "ok", payload)
-    save_cache(ch_num, publish_date, times_ran + 1)
+    is_agent = os.environ.get("CALLED_BY_AGENT") == "1"
+    if is_agent:
+        print(json.dumps({
+            "service": SERVICE_NAME,
+            "status": "ok",
+            "payload": payload
+        }))
+    else:
+        await send_to_bunker(SERVICE_NAME, "ok", payload)
 
-    if destination == "bot":
-        return payload
+    save_cache(ch_num, publish_date, times_ran + 1)
 
 
 if __name__ == "__main__":

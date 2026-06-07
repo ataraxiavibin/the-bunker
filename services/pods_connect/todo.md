@@ -1,2 +1,0 @@
-- [x] Basic functionality: connect to Bluetooth headphones
-- [ ] Different start conditions: with or without Hotspot, with or without internet connection

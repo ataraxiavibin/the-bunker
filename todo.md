@@ -3,6 +3,7 @@
 
 ### RIGHT NOW (DEV):
 - [ ] normalize JSON returns and make a standardized stdout system in services/agent.
+  - [ ] it became kinda hard to keep it all in head. probably make a docs directory.
 
 ### Now
 - [ ] Build a proper Event Router
@@ -12,6 +13,9 @@
 ### Soon
 - [ ] Add Bunker DB
   - [ ] Move chapter-checking logic into Bunker
+
+### Ideal
+- [ ] Add automatic scanning of actions from local services (Agent)
 
 ---
 

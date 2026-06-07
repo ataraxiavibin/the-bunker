@@ -60,6 +60,9 @@ async def main():
     success = fn()
 
     await log_and_send("ok" if success else "error", ok_msg if success else err_msg)
+
+    if not success:
+        sys.exit(1)
   
 
 if __name__ == "__main__":

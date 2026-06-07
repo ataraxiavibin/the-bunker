@@ -47,7 +47,7 @@ async def call_to_bunker(service: str, target: Dict[str, str]):
 
     try:
         async with httpx.AsyncClient() as client:
-            r = await.client.post(
+            r = await client.post(
                 BUNKER_URL+"/call",
                 json=data,
                 headers=headers,

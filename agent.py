@@ -11,6 +11,7 @@ import os
 import sys
 import subprocess
 import asyncio
+import json
 from fastapi import FastAPI, Header, HTTPException, Request
 from pydantic import BaseModel
 from typing import Dict, Any
@@ -83,8 +84,14 @@ async def run_call(call: Call, request: Request, x_token: str = Header(...)) -> 
             proc.communicate(),
             timeout=15.0
         )
-        stdout = stdout_bytes.decode("utf-8", errors="replace")
+        stdout = stdout_bytes.decode("utf-8", errors="replace").strip()
         stderr = stderr_bytes.decode("utf-8", errors="replace")
+        parsed_stdout = stdout
+        try:
+            parsed_stdout = json.loads(stdout_str)
+        except json.JSONDecodeError as e:
+            pass # TODO: probably send status fatal
+
         returncode = proc.returncode
     except asyncio.TimeoutError as e:
         if proc:
@@ -123,7 +130,7 @@ async def run_call(call: Call, request: Request, x_token: str = Header(...)) -> 
         reply_to=call.caller,
         status=status,
         payload={
-            "stdout": stdout,
+            "stdout": parsed_stdout,
             "stderr": stderr,
             "returncode": returncode
         }

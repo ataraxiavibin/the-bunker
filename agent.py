@@ -34,7 +34,7 @@ MAPPINGS = {
     },
     "pods_connect": {
         "path": "services.pods_connect.connect", 
-        "actions": ["connect", "disconnect", "reload"] # reload not actually realised
+        "actions": ["connect", "disconnect", "reconnect"] 
     }
 }
 

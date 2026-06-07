@@ -17,7 +17,7 @@ from typing import Dict, Any
 from dotenv import load_dotenv
 from loguru import logger
 
-from bunker import Call, Target
+from bunker import Call, Target, Reply
 
 app = FastAPI()
 
@@ -39,27 +39,31 @@ MAPPINGS = {
 }
 
 @app.post("/call")
-async def run_call(call: Call, request: Request, x_token: str = Header(...)):
+async def run_call(call: Call, request: Request, x_token: str = Header(...)) -> Reply:
     if x_token != api_token:
         raise HTTPException(status_code=403, detail="Forbidden")
 
     target = call.target
 
     if target.service not in MAPPINGS:
-        return {
-                "service": target.service,
-                "reply_to": call.caller,
-                "status": "fatal",
-                "payload": {"reason": "File not found"}
-            } 
+        return Reply(
+                service=target.service,
+                reply_to=call.caller,
+                status="fatal",
+                payload={
+                    "reason": "File not found."
+                }
+            ) 
 
     if target.action not in MAPPINGS[target.service]["actions"]:
-        return {
-            "service": target.service,
-            "reply_to": call.caller,
-            "status": "fatal",
-            "payload": {"reason": f"Action {target.action} not found in {target.service} service."}
-        } 
+        return Reply(
+            service=target.service,
+            reply_to=call.caller,
+            status="fatal",
+            payload={
+                "reason": f"Action {target.action} not found in {target.service} service."
+            }
+        )
 
     cmd = [sys.executable, "-m", MAPPINGS[target.service]["path"], target.action]
 
@@ -73,7 +77,7 @@ async def run_call(call: Call, request: Request, x_token: str = Header(...)):
 
         stdout_bytes, stderr_bytes = await asyncio.wait_for(
             proc.communicate(),
-            timeout=20.0
+            timeout=15.0
         )
         stdout = stdout_bytes.decode("utf-8", errors="replace")
         stderr = stderr_bytes.decode("utf-8", errors="replace")
@@ -85,12 +89,14 @@ async def run_call(call: Call, request: Request, x_token: str = Header(...)):
                 await proc.wait()
             except ProcessLookupError:
                 pass
-        return {
-            "service": target.service,
-            "reply_to": call.caller,
-            "status": "fatal",
-            "payload": {"reason": "Process execution timed out"}
-        }
+        return Reply(
+            service=target.service,
+            reply_to=call.caller,
+            status="fatal",
+            payload={
+                "reason": "Process execution timed out"
+            }
+        )
     except Exception as e:
         if proc and proc.returncode is None:
             try:
@@ -98,24 +104,26 @@ async def run_call(call: Call, request: Request, x_token: str = Header(...)):
                 await proc.wait()
             except ProcessLookupError:
                 pass
-        return {
-            "service": target.service,
-            "reply_to": call.caller,
-            "status": "fatal",
-            "payload": {"reason": f"Execution error: {e}"}
-        }
+        return Reply(
+            service=target.service,
+            reply_to=call.caller,
+            status="fatal",
+            payload={
+                "reason": f"Execution error: {e}"
+            }
+        )
 
     status = "ok" if returncode == 0 else "error"
-    return {
-        "service": target.service,
-        "reply_to": call.caller,
-        "status": status,
-        "payload": {
+    return Reply(
+        service=target.service,
+        reply_to=call.caller,
+        status=status,
+        payload={
             "stdout": stdout,
             "stderr": stderr,
             "returncode": returncode
         }
-    }
+    )
         # TODO: normalize JSON returns and make a standardized stdout system in services/agent.
 
 

@@ -72,7 +72,7 @@ async def forward_call(call: Call, request: Request, x_token: str = Header(...))
                 headers=headers,
                 timeout=5.0
             )
-    except httpx.HTTPXError as e:
+    except httpx.HTTPError as e:
         logger.warning(f"Couldn't reach agent.py: {e}")
         return {"status": "fatal"}
     except Exception as e:

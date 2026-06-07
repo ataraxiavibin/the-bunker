@@ -77,7 +77,7 @@ async def run_call(call: Call, request: Request, x_token: str = Header(...)) -> 
             *cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            env
+            env=env
         )
 
         stdout_bytes, stderr_bytes = await asyncio.wait_for(
@@ -88,7 +88,7 @@ async def run_call(call: Call, request: Request, x_token: str = Header(...)) -> 
         stderr = stderr_bytes.decode("utf-8", errors="replace")
         parsed_stdout = stdout
         try:
-            parsed_stdout = json.loads(stdout_str)
+            parsed_stdout = json.loads(stdout)
         except json.JSONDecodeError as e:
             pass # TODO: probably send status fatal
 

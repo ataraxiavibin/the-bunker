@@ -1,6 +1,5 @@
 # transmitter.py
 
-import requests
 import httpx
 import os
 from typing import Dict, Any
@@ -31,10 +30,10 @@ async def send_to_bunker(service: str, status: str, payload: Dict[str, Any]):
                 timeout=5
             )
     except httpx.HTTPError as e:
-        logger.warning(f"Couldn't reach Bunker: {e}")
+        logger.error(f"Couldn't reach Bunker: {e}")
         return False
     except Exception as e:
-        logger.warning(f"Unexpected error: {e}")
+        logger.error(f"Unexpected error: {e}")
         return False
 
     return True

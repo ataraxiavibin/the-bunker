@@ -51,7 +51,7 @@ async def handle_ping():
     return {"status": "alive"}
 
 @app.post("/call")
-async def forward_call(call: Call, request: Request, x_token: str = Header(...)):
+async def forward_call(call: Call, request: Request, x_token: str = Header(...)) -> Dict[str, Any]:
     if x_token != api_token:
         logger.warning(f"Failed auth attempt from {request.client.host}")
         raise HTTPException(status_code=403, detail="Forbidden")
@@ -72,14 +72,26 @@ async def forward_call(call: Call, request: Request, x_token: str = Header(...))
                 headers=headers,
                 timeout=5.0
             )
+
+        result.raise_for_status()
+        agent_data = result.json()
+        
     except httpx.HTTPError as e:
         logger.warning(f"Couldn't reach agent.py: {e}")
-        return {"status": "fatal"}
+        raise HTTPException(status_code=502, detail="Agent is unreachable")
     except Exception as e:
         logger.warning(f"Unexpected error: {e}")
-        return {"status": "fatal"}
+        raise HTTPException(status_code=500, detail="Internal Error")
 
-    return {"status": "ok"}
+    status = agent_data["status"]
+    payload = agent_data["payload"]["stdout"]["payload"] # yeah this is complicated.
+    logger.info(f"Got back reply: {agent_data}")
+    logger.info(f"Sent back payload to {call.caller}: {payload}")
+    if status == "fatal":
+        reason = payload.get("reason", "Unknown agent error")
+        raise HTTPException(status_code=400, detail=reason)
+
+    return payload
 
 
 if __name__ == "__main__":

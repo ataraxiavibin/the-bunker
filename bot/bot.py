@@ -6,14 +6,17 @@
 import os
 import asyncio
 import logging
+import json
 from dotenv import load_dotenv
 
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters.command import Command
 from aiogram import F
 
-from services.berserk_checker import checker
 from shared.connection import is_bunker_alive
+from shared.transmitter import call_to_bunker
+
+NAME = "telegram_bot"
 
 load_dotenv()
 tokenbot = os.environ.get("BOT_API") 
@@ -40,10 +43,18 @@ async def cmd_start(message: types.Message):
 
 @dp.message(Command("chapter"))
 async def cmd_chapter(message: types.Message):
-    result = await asyncio.to_thread(checker.check, destination="bot")  # this is not good, because:
-                                                                        # breaks the whole philosophy of a "one entry, one exit" system
-                                                                        # but it works right now, so i'll change it when i'll make bunker.py a real entrance, not just an exit.
-    await message.reply(f"{result["message"]} Current chapter: {result["chapter"]}.")
+
+    response = await call_to_bunker(
+        NAME,
+        {
+            "service": "berserk_checker",
+            "action": "check"
+        }
+    )
+
+    data = response.json()
+    
+    await message.reply(f"{data["message"]} Current chapter: {data["chapter"]}.")
 
 
 @dp.message(F.text.lower() == "check bunker connection")

@@ -28,7 +28,9 @@ async def log_and_send(status: str, msg: str, print_json: bool) -> None:
         print(json.dumps({
             "service": SERVICE_NAME,
             "status": status,
-            "message": msg 
+            "payload": {
+                "message": msg
+            }
         }))
     else:
         print(f"LOG: {msg}")

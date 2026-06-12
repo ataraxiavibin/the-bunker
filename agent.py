@@ -48,7 +48,7 @@ async def run_call(call: Call, request: Request, x_token: str = Header(...)) -> 
     target = call.target
 
     if target.service not in MAPPINGS:
-        logger.warning(f"Service not found. | SERVICE_NAME: {target.service}, ACTION: {target.action}, REPLY_TO: {call.caller}")
+        logger.warning(f"Service {target.service} not found. | ACTION: {target.action}, REPLY_TO: {call.caller}")
         return Reply(
                 service=target.service,
                 reply_to=call.caller,
@@ -59,17 +59,17 @@ async def run_call(call: Call, request: Request, x_token: str = Header(...)) -> 
             ) 
 
     if target.action not in MAPPINGS[target.service]["actions"]:
-        logger.warning(f"Action not found. | ACTION: {target.action}, SERVICE: {target.service}, REPLY_TO: {call.caller}")
+        logger.warning(f"Action {target.action} not found in {target.service}. | REPLY_TO: {call.caller}")
         return Reply(
             service=target.service,
             reply_to=call.caller,
             status="fatal",
             payload={
-                "reason": f"Action {target.action} not found in {target.service} service."
+                "reason": f"Action {target.action} not found in {target.service} service"
             }
         )
 
-    logger.info(f"Executing {target.action} on {target.service} for {call.caller}")
+    logger.info(f"Executing {target.action} on {target.service} for {call.caller}.")
 
     cmd = [sys.executable, "-m", MAPPINGS[target.service]["path"], target.action, "--json"]
 
@@ -136,7 +136,7 @@ async def run_call(call: Call, request: Request, x_token: str = Header(...)) -> 
         )
 
     status = "ok" if returncode == 0 else "error"
-    logger.info(f"Reply sent. For more details, look at logs/bunker.log | SERVICE: {target.service}, ACTION: {target.action}, STATUS: {status}, REPLY_TO: {call.caller}")
+    logger.info(f"Reply sent to {call.caller}. For more details, look at logs/bunker.log | SERVICE: {target.service}, ACTION: {target.action}, STATUS: {status}")
     return Reply(
         service=target.service,
         reply_to=call.caller,

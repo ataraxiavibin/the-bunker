@@ -5,7 +5,7 @@
 import os
 import sys
 import asyncio
-import requests
+import httpx
 import json
 from shared.transmitter import send_to_bunker
 from typing import TypedDict
@@ -24,7 +24,7 @@ class CacheData(TypedDict):
     times_ran: int
 
 
-def fetch():
+async def fetch():
     headers = {"User-Agent": "MangaTrackerCLI/1.0"}
     manga_id = "801513ba-a712-498c-8f57-cae55b38cc92"
     params={
@@ -33,19 +33,18 @@ def fetch():
         "limit": 1
     }
 
-    r = requests.get(
-        f"{BASE_URL}/manga/{manga_id}/feed",
-        headers=headers,
-        params=params,
-        timeout=10
-    )
+    async with httpx.AsyncClient() as client:
+        r = await client.get(
+            f"{BASE_URL}/manga/{manga_id}/feed",
+            headers=headers,
+            params=params,
+            timeout=10
+        )
+        r.raise_for_status()
+        return r
 
-    r.raise_for_status()
-    
-    return r
 
-
-def load() -> CacheData: # loads json data
+async def load() -> CacheData: # loads json data
     if not CACHE_FILE.exists():
         return {}
 
@@ -56,7 +55,7 @@ def load() -> CacheData: # loads json data
         raise ValueError("File is corrupted") from e
 
 
-def save_cache(chapter: int, time_published: str, times_ran: int) -> None: # writes into a json file
+async def save_cache(chapter: int, time_published: str, times_ran: int) -> None: # writes into a json file
     data = {"chapter": chapter, "published": time_published, "times_ran": times_ran}
     with open(CACHE_FILE, "w") as file:
         json.dump(data, file)
@@ -64,7 +63,7 @@ def save_cache(chapter: int, time_published: str, times_ran: int) -> None: # wri
 
 async def check():
     try:
-        cache = load()
+        cache = await load()
     except ValueError as e:
         await send_to_bunker(SERVICE_NAME, "error", {"message": str(e)})
         print(f"ERROR: {e}.") # here call to a log/transmitter function
@@ -73,8 +72,8 @@ async def check():
     times_ran = cache.get("times_ran", 0)
 
     try:
-        request = fetch()
-    except requests.RequestException as e:
+        request = await fetch()
+    except httpx.HTTPError as e:
         raise ConnectionError(f"Couldn't access the API: {e}") from e
 
     data = request.json()
@@ -112,7 +111,7 @@ async def check():
     else:
         await send_to_bunker(SERVICE_NAME, "ok", payload)
 
-    save_cache(ch_num, publish_date, times_ran + 1)
+    await save_cache(ch_num, publish_date, times_ran + 1)
 
 
 if __name__ == "__main__":

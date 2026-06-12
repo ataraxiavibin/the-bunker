@@ -53,7 +53,7 @@ async def forward_call(call: Call, request: Request, x_token: str = Header(...))
                 f"{agent_url}/call",
                 json=data,
                 headers=headers,
-                timeout=5.0
+                timeout=20.0
             )
 
         result.raise_for_status()

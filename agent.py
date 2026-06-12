@@ -44,9 +44,6 @@ async def run_call(call: Call, request: Request, x_token: str = Header(...)) -> 
     if x_token != api_token:
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    env = os.environ.copy()
-    env["CALLED_BY_AGENT"] = "1"
-
     target = call.target
 
     if target.service not in MAPPINGS:
@@ -69,15 +66,14 @@ async def run_call(call: Call, request: Request, x_token: str = Header(...)) -> 
             }
         )
 
-    cmd = [sys.executable, "-m", MAPPINGS[target.service]["path"], target.action]
+    cmd = [sys.executable, "-m", MAPPINGS[target.service]["path"], target.action, "--json"]
 
     proc = None
     try:
         proc = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            env=env
+            stderr=asyncio.subprocess.PIPE
         )
 
         stdout_bytes, stderr_bytes = await asyncio.wait_for(

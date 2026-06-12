@@ -8,6 +8,7 @@ import asyncio
 import httpx
 import json
 from shared.transmitter import send_to_bunker
+from shared.parser import get_args
 from typing import TypedDict
 from pathlib import Path
 
@@ -101,8 +102,9 @@ async def check():
 
     payload = {"message": msg, "chapter": ch_num}
 
-    is_agent = os.environ.get("CALLED_BY_AGENT") == "1"
-    if is_agent:
+    args = get_args(SERVICE_NAME, "bunker microservice that check if the new berserk chapter is out", ["check"])
+    print_json = args.json
+    if print_json:
         print(json.dumps({
             "service": SERVICE_NAME,
             "status": "ok",

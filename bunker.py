@@ -83,8 +83,13 @@ async def forward_call(call: Call, request: Request, x_token: str = Header(...))
         logger.warning(f"Unexpected error: {e}")
         raise HTTPException(status_code=500, detail="Internal Error")
 
-    status = agent_data["status"]
-    payload = agent_data["payload"]["stdout"]["payload"] # yeah this is complicated.
+    try:
+        status = agent_data["status"]
+        payload = agent_data["payload"]["stdout"]["payload"] # yeah this is complicated.
+    except (KeyError, TypeError) as e:
+        logger.error(f"Something is wrong with the payload: {agent_data}")
+        raise HTTPException(status_code=400, detail="Something went wrong on agent/service side. Check logs/bunker.log")
+
     logger.info(f"Got back reply: {agent_data}")
     logger.info(f"Sent back payload to {call.caller}: {payload}")
     if status == "fatal":

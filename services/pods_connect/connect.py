@@ -23,9 +23,8 @@ def bt(*args) -> str:
     ).stdout
 
 
-async def log_and_send(status: str, msg: str) -> None:
-    is_agent = os.environ.get("CALLED_BY_AGENT") == "1"
-    if is_agent:
+async def log_and_send(status: str, msg: str, print_json: bool) -> None:
+    if print_json:
         print(json.dumps({
             "service": SERVICE_NAME,
             "status": status,
@@ -54,12 +53,14 @@ async def main():
     args = get_args(SERVICE_NAME, "bunker microservice to control bluetooth connection", list(ACTIONS))
     
     action = args.action or ("disconnect" if check_connection() else "connect")
-    # to be honest, this is a lot of "not explicit" architectural behaviour, this sucks.
+    # to be honest, this is a lot of "not explicit" architectural behaviour, this (mb) sucks.
+
+    print_json = args.json
 
     fn, ok_msg, err_msg = ACTIONS[action]
     success = fn()
 
-    await log_and_send("ok" if success else "error", ok_msg if success else err_msg)
+    await log_and_send("ok" if success else "error", ok_msg if success else err_msg, print_json)
 
     if not success:
         sys.exit(1)

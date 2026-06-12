@@ -18,7 +18,7 @@ from typing import Dict, Any
 from dotenv import load_dotenv
 from loguru import logger
 
-from bunker import Call, Target, Reply
+from shared.models import Call, Target, Reply
 
 app = FastAPI()
 

@@ -3,7 +3,7 @@
 import httpx
 import os
 from typing import Dict, Any
-from bunker import Call
+from shared.models import Call
 from dotenv import load_dotenv
 from loguru import logger
 

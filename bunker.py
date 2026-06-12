@@ -8,6 +8,8 @@ from typing import Dict, Any
 from dotenv import load_dotenv
 from loguru import logger
 
+from shared.models import Event, Call, Reply, Target
+
 logger.add("./logs/bunker.log", rotation="10 MB", retention="30 days", level="INFO")
 
 app = FastAPI()
@@ -15,25 +17,6 @@ app = FastAPI()
 load_dotenv()
 api_token = os.environ.get("API_TOKEN")
 agent_url = os.environ.get("AGENT_URL")
-
-class Event(BaseModel):
-    service: str
-    status: str
-    payload: Dict[str, Any]
-
-class Target(BaseModel):
-    service: str
-    action: str
-
-class Call(BaseModel):
-    caller: str
-    target: Target
-
-class Reply(BaseModel):
-    service: str
-    reply_to: str
-    status: str
-    payload: Dict[str, Any]
 
 
 @app.post("/event")

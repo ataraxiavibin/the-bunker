@@ -43,7 +43,6 @@ async def cmd_start(message: types.Message):
 
 @dp.message(Command("chapter"))
 async def cmd_chapter(message: types.Message):
-
     response = await call_to_bunker(
         NAME,
         {
@@ -52,11 +51,39 @@ async def cmd_chapter(message: types.Message):
         }
     )
 
+    if not response:
+        return await message.reply(f"Failed to reach the system. Call may are may not have been ran.")
+
     data = response.json()
     
     await message.reply(f"{data["message"]} Current chapter: {data["chapter"]}.")
 
+@dp.message(Command("pods"))
+async def cmd_pods(message: types.Message, command: CommandObject):
+    action = command.args
 
+    valid_actions = ["connect", "disconnect", "reconnect"]
+
+    if not action or action not in valid_actions:
+         return await message.reply(f"Provide a valid action: {', '.join(valid_actions)}")
+
+    response = await call_to_bunker(
+        NAME,
+        {
+            "service": "pods_connect",
+            "action": action
+        }
+    )
+    if not response:
+        return await message.reply(f"Failed to reach the system. Call may are may not have been ran.")
+
+    data = response.json()
+        
+    await message.reply(f"{data["message"]}")
+
+
+
+@dp.message(Command("bunker", "status", "c"))
 @dp.message(F.text.lower() == "check bunker connection")
 async def check_connection(message: types.Message):
     result = await asyncio.to_thread(is_bunker_alive)

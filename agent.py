@@ -91,7 +91,15 @@ async def run_call(call: Call, request: Request, x_token: str = Header(...)) -> 
         try:
             parsed_stdout = json.loads(stdout)
         except json.JSONDecodeError as e:
-            pass # TODO: probably send status fatal
+            logger.error(f"An error occured while parsing JSON | (unparsed) STDOUT: {stdout}")
+            return Reply(
+                service=target.service,
+                reply_to=call.caller,
+                status="fatal",
+                payload={
+                    "reason": f"An error occured while parsing JSON: {e}"
+                }
+            )
 
         returncode = proc.returncode
     except asyncio.TimeoutError as e:

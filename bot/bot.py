@@ -10,7 +10,7 @@ import json
 from dotenv import load_dotenv
 
 from aiogram import Bot, Dispatcher, types
-from aiogram.filters.command import Command
+from aiogram.filters import Command, CommandObject
 from aiogram import F
 
 from shared.connection import is_bunker_alive

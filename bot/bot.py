@@ -86,7 +86,7 @@ async def cmd_pods(message: types.Message, command: CommandObject):
 @dp.message(Command("bunker", "status", "c"))
 @dp.message(F.text.lower() == "check bunker connection")
 async def check_connection(message: types.Message):
-    result = await asyncio.to_thread(is_bunker_alive)
+    result = await is_bunker_alive()
 
     if result:
         await message.reply("Running!")

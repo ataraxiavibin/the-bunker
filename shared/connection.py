@@ -3,33 +3,35 @@
 # checks, if bunker exists..
 
 import os
-import requests
+import asyncio
+import httpx
 from dotenv import load_dotenv
 
 load_dotenv()
 
 BUNKER_URL = os.environ.get("BUNKER_URL")
 
-def is_bunker_alive(timeout: int = 2) -> bool:
+async def is_bunker_alive(timeout: int = 2) -> bool:
     try:
-        response = requests.get(BUNKER_URL+"/ping", timeout=timeout)
+        async with httpx.AsyncClient() as client:
+            response = await client.get(BUNKER_URL+"/ping", timeout=timeout)
 
-        if response.status_code == 200:
-            return True
+            if response.status_code == 200:
+                return True
         
+            return False
+
+    except httpx.HTTPError:
         return False
 
-    except requests.exceptions.RequestException:
-        return False
-
-def main():
+async def main():
     print(f"Pinging Bunker at {BUNKER_URL}...")
 
-    if is_bunker_alive():
+    if await is_bunker_alive():
         print("Bunker is ONLINE and accessible.")
     else:
         print("Bunker is OFFLINE or unreachable.")
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

@@ -42,13 +42,13 @@ MAPPINGS = {
 @app.post("/call")
 async def run_call(call: Call, request: Request, x_token: str = Header(...)) -> Reply:
     if x_token != api_token:
-        logger.warning(f"Failed auth attempt from {request.client.host}")
+        logger.warning(f"Failed auth attempt from '{request.client.host}'")
         raise HTTPException(status_code=403, detail="Forbidden")
 
     target = call.target
 
     if target.service not in MAPPINGS:
-        logger.warning(f"Service {target.service} not found. | ACTION: {target.action}, REPLY_TO: {call.caller}")
+        logger.warning(f"Service '{target.service}' not found. | ACTION: {target.action}, REPLY_TO: {call.caller}")
         return Reply(
                 service=target.service,
                 reply_to=call.caller,
@@ -59,17 +59,17 @@ async def run_call(call: Call, request: Request, x_token: str = Header(...)) -> 
             ) 
 
     if target.action not in MAPPINGS[target.service]["actions"]:
-        logger.warning(f"Action {target.action} not found in {target.service}. | REPLY_TO: {call.caller}")
+        logger.warning(f"Action '{target.action}' not found in '{target.service}'. | REPLY_TO: {call.caller}")
         return Reply(
             service=target.service,
             reply_to=call.caller,
             status="fatal",
             payload={
-                "reason": f"Action {target.action} not found in {target.service} service"
+                "reason": f"Action '{target.action}' not found in '{target.service}' service"
             }
         )
 
-    logger.info(f"Executing {target.action} on {target.service} for {call.caller}.")
+    logger.info(f"Executing '{target.action}' on {target.service} for {call.caller}.")
 
     cmd = [sys.executable, "-m", MAPPINGS[target.service]["path"], target.action, "--json"]
 
@@ -109,7 +109,7 @@ async def run_call(call: Call, request: Request, x_token: str = Header(...)) -> 
                 await proc.wait()
             except ProcessLookupError:
                 pass
-        logger.error(f"Process timed out: {target.service} | ACTION: {target.action}")
+        logger.error(f"Process of '{target.service}' timed out | ACTION: {target.action}")
         return Reply(
             service=target.service,
             reply_to=call.caller,
@@ -125,7 +125,7 @@ async def run_call(call: Call, request: Request, x_token: str = Header(...)) -> 
                 await proc.wait()
             except ProcessLookupError:
                 pass
-        logger.error(f"Execution error of {target.service} | {e}")
+        logger.error(f"Execution error of '{target.service}' | {e}")
         return Reply(
             service=target.service,
             reply_to=call.caller,
@@ -136,7 +136,7 @@ async def run_call(call: Call, request: Request, x_token: str = Header(...)) -> 
         )
 
     status = "ok" if returncode == 0 else "error"
-    logger.info(f"Reply sent to {call.caller}. For more details, look at logs/bunker.log | SERVICE: {target.service}, ACTION: {target.action}, STATUS: {status}")
+    logger.info(f"Reply sent to '{call.caller}'. For more details, look at logs/bunker.log | SERVICE: {target.service}, ACTION: {target.action}, STATUS: {status}")
     return Reply(
         service=target.service,
         reply_to=call.caller,
@@ -147,7 +147,6 @@ async def run_call(call: Call, request: Request, x_token: str = Header(...)) -> 
             "returncode": returncode
         }
     )
-        # TODO: normalize JSON returns and make a standardized stdout system in services/agent.
 
 
 if __name__ == "__main__":

@@ -11,7 +11,6 @@ aiogram==3.28.2
 
 # --- services ---
 httpx
-requests
 schedule
 
 # --- shared ---

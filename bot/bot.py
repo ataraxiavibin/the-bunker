@@ -52,7 +52,7 @@ async def cmd_chapter(message: types.Message):
     )
 
     if not response:
-        return await message.reply(f"Failed to reach the system. Call may are may not have been ran.")
+        return await message.reply(f"Failed to reach the system. Call may or may not have been run.")
 
     data = response.json()
     
@@ -75,7 +75,7 @@ async def cmd_pods(message: types.Message, command: CommandObject):
         }
     )
     if not response:
-        return await message.reply(f"Failed to reach the system. Call may are may not have been ran.")
+        return await message.reply(f"Failed to reach the system. Call may or may not have been run.")
 
     data = response.json()
         

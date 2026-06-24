@@ -39,6 +39,11 @@ MAPPINGS = {
     }
 }
 
+@app.get("/ping")
+async def handle_ping():
+    logger.debug("Got ping")
+    return {"status": "alive"}
+
 @app.post("/call")
 async def run_call(call: Call, request: Request, x_token: str = Header(...)) -> Reply:
     if x_token != api_token:

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # run.sh
 #
-# just auto-reload script when it changes
+# run and reload (dev mode)
 
-uvicorn bunker:app --host 0.0.0.0 --port 5050 --reload
+docker compose up -d
+watchfiles --ignore-paths ./services,./logs "python -m agent" .

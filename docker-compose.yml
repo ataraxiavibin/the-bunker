@@ -17,7 +17,7 @@ services:
 
   bot:
     build: .
-    command: watchfiles --ignore-paths ./logs 'python -m bot.bot' .
+    command: watchfiles --ignore-paths ./logs,./services 'python -m bot.bot' .
     restart: unless-stopped
     dns: 
       - 8.8.8.8

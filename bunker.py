@@ -31,6 +31,7 @@ async def handle_event(event: Event, request: Request, x_token: str = Header(...
 
 @app.get("/ping")
 async def handle_ping():
+    logger.debug("Got ping")
     return {"status": "alive"}
 
 @app.post("/call")

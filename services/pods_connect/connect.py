@@ -12,15 +12,33 @@ from shared.parser import get_args
 
 SERVICE_NAME = "pods_connect"
 MAC = "34:0E:22:C3:31:79"
-BT_TIMEOUT = 8
+BT_TIMEOUT = 10
 
-def bt(*args) -> str:
-    return subprocess.run(
-        ['bluetoothctl', *args], 
-        capture_output=True,
-        text=True,
-        timeout=BT_TIMEOUT
-    ).stdout
+async def bt(*args) -> str:
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            'bluetoothctl', *args,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+
+        stdout_bytes, _ = await asyncio.wait_for(
+            proc.communicate(),
+            timeout=BT_TIMEOUT
+        )
+    
+        return stdout_bytes.decode("utf-8", errors="replace")
+
+    except asyncio.TimeoutError:
+        if proc:
+            try:
+                proc.kill()
+                await proc.wait()
+            except ProcessLookupError:
+                pass
+            return "Process timed out." # return a string so no TypeError
+    except Exception as e:
+        return f"Unexpected error: {e}" # same here 
 
 
 async def log_and_send(status: str, msg: str, print_json: bool) -> None:
@@ -36,31 +54,30 @@ async def log_and_send(status: str, msg: str, print_json: bool) -> None:
         print(f"LOG: {msg}")
         await send_to_bunker(SERVICE_NAME, status, {"message": msg})
     
-    # TODO: mb check if connection is valid and the bunker is online
     # TODO: maybe add log_and_send to a shared file, since it's gonna be widely used
 
 
-def connect() -> bool: return "Connection successful" in bt("connect", MAC)
-def disconnect() -> bool: return "Disconnection successful" in bt("disconnect", MAC)
-def reconnect() -> bool: bt("disconnect", MAC); return connect()
-def check_connection() -> bool: return MAC in bt("devices", "Connected") 
+#TODO: refactor all of this to return the reason from bluetoothctl
+async def connect() -> bool: return "Connection successful" in await bt("connect", MAC)
+async def disconnect() -> bool: return "Disconnection successful" in await bt("disconnect", MAC)
+async def reconnect() -> bool: await bt("disconnect", MAC); return await connect()
+async def check_connection() -> bool: return MAC in await bt("devices", "Connected") 
 
 ACTIONS = {
     "connect": (connect, "Connected.", "Failed to connect."),
     "disconnect": (disconnect, "Disconnected.", "Failed to disconnect."),
     "reconnect": (reconnect, "Reconnect.", "Failed to reconnect.")
-} # tbh i hate how it logs no reason, but it works. 
+} 
 
 async def main():
     args = get_args(SERVICE_NAME, "bunker microservice to control bluetooth connection", list(ACTIONS))
     
-    action = args.action or ("disconnect" if check_connection() else "connect")
-    # to be honest, this is a lot of "not explicit" architectural behaviour, this (mb) sucks.
+    action = args.action or ("disconnect" if await check_connection() else "connect")
 
     print_json = args.json
 
     fn, ok_msg, err_msg = ACTIONS[action]
-    success = fn()
+    success = await fn()
 
     await log_and_send("ok" if success else "error", ok_msg if success else err_msg, print_json)
 

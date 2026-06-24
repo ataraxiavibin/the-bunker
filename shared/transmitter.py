@@ -7,6 +7,7 @@ from shared.models import Call
 from dotenv import load_dotenv
 from loguru import logger
 
+
 logger.add("./logs/transmitter.log", rotation="2 MB", retention="7 days", level="INFO")
 
 load_dotenv()
@@ -38,12 +39,9 @@ async def send_to_bunker(service: str, status: str, payload: Dict[str, Any]):
 
     return True
 
-async def call_to_bunker(caller: str, target: Dict[str, str]): # TODO: just use Call; maybe add it to shared/models
+async def call_to_bunker(call: Call):
     headers = {"x-token": API_TOKEN}
-    data = {
-        "caller": caller,
-        "target": target
-    }
+    data = call.model_dump()
     logger.info(f"Calling from {data["caller"]} -> {data["target"]["service"]} to {data["target"]["action"]}")
 
     try:

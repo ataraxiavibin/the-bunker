@@ -46,6 +46,7 @@ async def run_call(call: Call, request: Request, x_token: str = Header(...)) -> 
         raise HTTPException(status_code=403, detail="Forbidden")
 
     target = call.target
+    logger.info(f"Received call: '{target.action}' on {target.service} for {call.caller}.")
 
     if target.service not in MAPPINGS:
         logger.warning(f"Service '{target.service}' not found. | ACTION: {target.action}, REPLY_TO: {call.caller}")

@@ -5,14 +5,15 @@
 fastapi
 uvicorn
 pydantic
+httpx
 
 # --- bot ---
 aiogram==3.28.2
 
 # --- services ---
-httpx
 schedule
 
 # --- shared ---
 loguru
 python-dotenv
+watchfiles

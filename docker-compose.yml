@@ -1,0 +1,34 @@
+services:
+  bunker:
+    build: .
+    command: uvicorn bunker:app --host 0.0.0.0 --port 5050 --reload
+    ports: 
+      - "5050:5050"
+    restart: unless-stopped
+    volumes: 
+      - .:/app
+      - ./logs:/app/logs
+    env_file: .env
+    environment:
+      - AGENT_URL=http://host.docker.internal:5051
+      - BUNKER_URL=http://localhost:5050
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  bot:
+    build: .
+    command: watchfiles --ignore-paths ./logs 'python -m bot.bot' .
+    restart: unless-stopped
+    dns: 
+      - 8.8.8.8
+      - 1.1.1.1
+    volumes:
+      - .:/app
+    env_file: .env
+    environment:
+      - BUNKER_URL=http://bunker:5050
+      - AGENT_URL=http://host.docker.internal:5051
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - bunker

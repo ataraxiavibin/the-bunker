@@ -72,6 +72,7 @@ async def run_call(call: Call, request: Request, x_token: str = Header(...)) -> 
 
     logger.info(f"Executing '{target.action}' on {target.service} for {call.caller}.")
 
+    # use subprocess to make the system language-agnostic.
     cmd = [sys.executable, "-m", MAPPINGS[target.service]["path"], target.action, "--json"]
 
     proc = None

@@ -72,9 +72,9 @@ async def forward_call(call: Call, request: Request, x_token: str = Header(...))
 
     try:
         status = agent_data["status"]
-        payload = agent_data["payload"]["stdout"]["payload"] # yeah this is complicated.
+        payload = agent_data["payload"]
     except (KeyError, TypeError) as e:
-        logger.error(f"Something is wrong with the payload: {agent_data} | {e}")
+        logger.error(f"Something is wrong with the payload: {agent_data} | exception: {e}")
         raise HTTPException(status_code=400, detail="Something went wrong on agent/service side. Check logs/bunker.log")
 
     logger.info(f"Got back reply: {agent_data}")

@@ -7,7 +7,6 @@ import sys
 import asyncio
 import httpx
 import json
-from shared.transmitter import send_to_bunker
 from shared.parser import get_args
 from typing import TypedDict
 from pathlib import Path
@@ -66,8 +65,9 @@ async def check():
     try:
         cache = await load()
     except ValueError as e:
-        await send_to_bunker(SERVICE_NAME, "error", {"message": str(e)})
-        print(f"ERROR: {e}.") # here call to a log/transmitter function
+        # this is just trash. when logic will move to bunker, it's gonna be better. this is useless though.
+        # await send_to_bunker(SERVICE_NAME, "error", {"message": str(e)})
+        print(f"ERROR: {e}.", file=sys.stderr) 
         cache = {}
 
     times_ran = cache.get("times_ran", 0)
@@ -100,20 +100,14 @@ async def check():
     else:
         msg = "No new chapter."
 
-    payload = {"message": msg, "chapter": ch_num}
-
-    args = get_args(SERVICE_NAME, "bunker microservice that check if the new berserk chapter is out", ["check"])
-    print_json = args.json
-    if print_json:
-        print(json.dumps({
-            "service": SERVICE_NAME,
-            "status": "ok",
-            "payload": payload
-        }))
-    else:
-        await send_to_bunker(SERVICE_NAME, "ok", payload)
-
     await save_cache(ch_num, publish_date, times_ran + 1)
+
+    print(json.dumps({
+        "message": msg,
+        "chapter": ch_num
+    }))
+
+    sys.exit(0)
 
 
 if __name__ == "__main__":

@@ -79,7 +79,7 @@ async def main():
     # await log_and_send("ok" if success else "error", ok_msg if success else err_msg, print_json)
 
     if not success:
-        print(err_msg, file=sys.stderr) # since the code is written horribly, we don't have anything to send to stderr that contains any remote reason
+        print(json.dumps({"message": err_msg})) # since the code is written horribly, we don't have anything to send that contains any remote reason
         sys.exit(1)
 
     print(json.dumps({"message": ok_msg}))

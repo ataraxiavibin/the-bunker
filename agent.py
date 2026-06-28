@@ -307,15 +307,67 @@ async def handle_cli():
 
     run_parser = subparsers.add_parser("run", help="execute a service")
 
-    run_parser.add_argument("file", help="file to execute (true to mappings)")
+    run_parser.add_argument("service", help="service to execute (true to mappings)")
     run_parser.add_argument("action", nargs="?", help="action to complete (true to mappings)")
     run_parser.add_argument("-t", "--text", action="store_true", help="human-readable output")
 
     args = parser.parse_args()
-    if args.command:
-        target = Target(service=args.file, action=args.action)
 
-    # so, TODO:
+    target = Target(service=args.service, action=args.action)
+
+    ctx = EventContext(target)
+
+    if target.service not in MAPPINGS:
+        print(f"error: service '{target.service}' not found.")
+        sys.exit(1)
+    if target.action not in MAPPINGS[target.service]["actions"]:
+        print(f"error: action '{target.action}' not found in '{target.service}.'")
+        sys.exit(1)
+
+    cmd = [sys.executable, "-m", MAPPINGS[target.service]["path"], target.action]
+
+    result = await execute_service(cmd) # ExecutionResult
+
+    stdout = result["stdout"]
+    stderr = result["stderr"]
+    returncode = result["returncode"]
+    duration_ms = result["duration_ms"]
+    reason = result["reason"]
+
+    parsed_stdout = None
+
+    if not stdout:
+        fail_reason = reason or "service returned no stdout"
+        print(f"{fail_reason} | stderr: {stderr}, exit code: {returncode}")
+        ctx.fatal(reason=fail_reason, stderr=stderr, returncode=returncode, duration_ms=duration_ms)
+        sys.exit(1) # service exit code doesn't matter, since service doesn't follow the systems contract
+
+    try:
+        parsed_stdout = json.loads(stdout)
+    except json.JSONDecodeError as e:
+        print(f"json parse error: {e}, stdout: {stdout}")
+        ctx.fatal(f"an error occured while parsing json", stderr=stderr, returncode=returncode, duration_ms=duration_ms, log_details=stdout)
+        sys.exit(1)
+
+    # from now we're sure that parsed_stdout exists and it's valid json
+
+    if args.text:
+        msg = parsed_stdout["message"]
+    else:
+        msg = parsed_stdout
+
+    if returncode == 0:
+        print(msg)
+        return ctx.ok(stderr=stderr, duration_ms=duration_ms, payload=parsed_stdout)
+    else:
+        if not reason and stderr:
+            reason = stderr.strip().split('\n')[-1][:100]
+        if not reason:
+            reason = parsed_stdout.get("message", f"service exited with {returncode}") # in case of failure, services should print in stdout reason in "message"?
+
+        print(msg)
+        ctx.error(reason=reason, stderr=stderr, returncode=returncode, duration_ms=duration_ms, payload=parsed_stdout)
+        sys.exit(returncode)
 
 
 @app.get("/ping")
@@ -324,6 +376,8 @@ async def handle_ping():
     return {"status": "alive"}
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=5051)
-    # asyncio.run(handle_cli())
+    if len(sys.argv) > 1 and sys.argv[1] == "run":
+        asyncio.run(handle_cli())
+    else: # this is not used since i launch through uvicorn command, but it bugs me if i don't add it
+        import uvicorn
+        uvicorn.run(app, host="0.0.0.0", port=5051)

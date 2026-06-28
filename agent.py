@@ -1,11 +1,6 @@
 # agent.py
 #
 # runs services
-# 
-# just a test idea:
-# it will be a separate server from bunker, which purpose will solely be:
-# run local services and get the results back to bunker.
-# this way, every device can have their own local services and Bunker system can work with many different devices at the same time while not taking up many resources.
 
 import os
 import sys
@@ -186,7 +181,7 @@ async def execute_service(cmd: list, timeout: float = 15.0) -> ExecutionResult:
         returncode = proc.returncode
         duration_ms = int((time.perf_counter() - start_time) * 1000)
 
-        logger.debug(f"Successfully ran {cmd}.")
+        logger.debug(f"successfully ran {cmd}.")
         return ExecutionResult(
             stdout=stdout,
             stderr=stderr,
@@ -225,7 +220,7 @@ async def execute_service(cmd: list, timeout: float = 15.0) -> ExecutionResult:
         if isinstance(e, FileNotFoundError):
             reason = "executable file not found."
         elif isinstance(e, PermissionError):
-            reason = "permission denied to execute the service."
+            reason = "permission to execute the service denied."
         else:
             reason = f"failed to launch the service process: {type(e).__name__}"
 

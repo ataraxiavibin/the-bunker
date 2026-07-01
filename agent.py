@@ -102,7 +102,7 @@ class ReplyContext:
             timestamp=datetime.now(timezone.utc),
             duration_ms=duration_ms,
             payload=payload
-            )
+        )
 
 
 class EventContext:

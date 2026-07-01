@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 from loguru import logger
 
 from shared.models import Call, Target, Reply, ReplyOk, ReplyError, Event, EventOk, EventError
-
+from shared.transmitter import send_to_bunker
 app = FastAPI()
 
 load_dotenv()
@@ -351,18 +351,22 @@ async def handle_cli():
     else:
         msg = parsed_stdout
 
+
+    print(msg)
     if returncode == 0:
-        print(msg)
-        return ctx.ok(stderr=stderr, duration_ms=duration_ms, payload=parsed_stdout)
+        event = ctx.ok(stderr=stderr, duration_ms=duration_ms, payload=parsed_stdout)
     else:
         if not reason and stderr:
             reason = stderr.strip().split('\n')[-1][:100]
         if not reason:
             reason = parsed_stdout.get("message", f"service exited with {returncode}") # in case of failure, services should print in stdout reason in "message"?
+        event = ctx.error(reason=reason, stderr=stderr, returncode=returncode, duration_ms=duration_ms, payload=parsed_stdout)
 
-        print(msg)
-        ctx.error(reason=reason, stderr=stderr, returncode=returncode, duration_ms=duration_ms, payload=parsed_stdout)
-        sys.exit(returncode)
+
+
+    if not await send_to_bunker(event):
+        logger.critical(f"Couldn't send Event to Bunker: {event}") # maybe add queuing, so I don't lose info in logs. for future at least
+    sys.exit(returncode or 0)
 
 
 @app.get("/ping")

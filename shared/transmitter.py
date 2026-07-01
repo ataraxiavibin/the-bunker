@@ -28,6 +28,7 @@ async def send_to_bunker(event: Event):
                 headers=headers,
                 timeout=5
             )
+            r.raise_for_status()
     except httpx.HTTPError as e:
         logger.error(f"Couldn't reach Bunker: {e}")
         return False

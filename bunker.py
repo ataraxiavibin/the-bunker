@@ -20,7 +20,7 @@ agent_url = os.environ.get("AGENT_URL")
 
 
 @app.post("/event")
-async def handle_event(event: Event, request: Request, x_token: str = Header(...)):
+async def handle_event(event: Event, request: Request, x_token: str = Header(...)) -> Dict[str, str]:
     if x_token != api_token:
         logger.warning(f"Failed auth attempt from {request.client.host}")
         raise HTTPException(status_code=403, detail="Forbidden")

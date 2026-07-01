@@ -15,13 +15,13 @@ logger.add("./logs/transmitter.log", rotation="2 MB", retention="7 days", level=
 load_dotenv()
 
 BUNKER_URL = os.environ.get("BUNKER_URL")
-API_TOKEN = os.environ.get("API_TOKEN") 
+API_TOKEN = os.environ.get("API_TOKEN")
 
 async def send_to_bunker(event: Event):
     headers = {"x-token": API_TOKEN}
     data = event.model_dump(mode="json")
     try:
-        async with httpx.AsyncClient() as client: 
+        async with httpx.AsyncClient() as client:
             r = await client.post(
                 BUNKER_URL+"/event",
                 json=data,

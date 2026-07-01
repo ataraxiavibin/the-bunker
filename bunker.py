@@ -59,7 +59,7 @@ async def forward_call(call: Call, request: Request, x_token: str = Header(...))
 
         result.raise_for_status()
         agent_data = result.json()
-        
+
     except httpx.TimeoutException as e:
         logger.warning(f"Request timed out: {e}")
         raise HTTPException(status_code=504, detail="Agent did not reply in time")

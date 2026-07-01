@@ -2,8 +2,10 @@
 
 import httpx
 import os
+from datetime import datetime
 from typing import Dict, Any
-from shared.models import Call
+from pydantic import BaseModel
+from shared.models import Call, Event
 from dotenv import load_dotenv
 from loguru import logger
 
@@ -15,13 +17,9 @@ load_dotenv()
 BUNKER_URL = os.environ.get("BUNKER_URL")
 API_TOKEN = os.environ.get("API_TOKEN") 
 
-async def send_to_bunker(service: str, status: str, payload: Dict[str, Any]):
+async def send_to_bunker(event: Event):
     headers = {"x-token": API_TOKEN}
-    data = {
-        "service": service,
-        "status": status,
-        "payload": payload
-    }
+    data = event.model_dump(mode="json")
     try:
         async with httpx.AsyncClient() as client: 
             r = await client.post(

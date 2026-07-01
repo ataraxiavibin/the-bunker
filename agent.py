@@ -22,6 +22,7 @@ app = FastAPI()
 load_dotenv()
 api_token = os.environ.get("API_TOKEN")
 
+logger.remove()
 logger.add("./logs/agent.log", rotation="10 MB", retention="30 days", level="INFO")
 
 # name: path, actions

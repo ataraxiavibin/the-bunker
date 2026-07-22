@@ -27,10 +27,15 @@ class BunkerTUI:
         return cls.wrap("\n".join(lines))
 
     @classmethod
-    def error(cls, reason: str, latency: int | None = None) -> str:
+    def error(cls, reason: str, nodes: dict[str, bool],  latency: int | None = None) -> str:
         lines = [f"!_> {reason.lower()}"]
         if latency is not None:
             lines.append(f"~~ {latency} ms")
+
+        if nodes is not None:
+            lines.append("")
+            lines.append("ran diagnostics:")
+            lines.extend(cls._format_nodes(nodes))
 
         return cls.wrap("\n".join(lines))
 
@@ -63,6 +68,20 @@ class BunkerTUI:
         return cls.wrap("\n".join(content))
 
     @classmethod
+    def _format_nodes(cls, nodes: dict[str, bool]) -> list[str]:
+        lines = []
+        max_len = max(len(key) for key in nodes.keys()) if nodes else 0
+
+
+        for key, is_up in nodes.items():
+            icon = "[x]" if is_up else "[#]"
+            status = "intact" if is_up else "connection failed"
+
+            lines.append(f"- {icon} {key.lower():<{max_len}} :: {status}")
+
+        return lines
+
+    @classmethod
     def status_grid(cls, nodes: dict[str, bool], latency: int | None = None) -> str:
         lines = []
         if latency is not None:
@@ -71,14 +90,7 @@ class BunkerTUI:
             lines.append("")
 
         lines.append("nodes:")
-
-        max_len = max(len(key) for key in nodes.keys()) if nodes else 0
-
-        for key, is_up in nodes.items():
-            icon = "[x]" if is_up else "[#]"
-            status = "intact" if is_up else "connection failed"
-
-            lines.append(f"- {icon} {key.lower():<{max_len}} :: {status}")
+        lines.extend(cls._format_nodes(nodes))
 
         return cls.wrap("\n".join(lines))
 

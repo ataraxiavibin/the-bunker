@@ -42,7 +42,7 @@ async def execute_bunker_call(target: Target) -> tuple[dict | None, str | None]:
     register_res = await get_id(intent)
 
     if not register_res:
-        return None, "get_id returned False instead of a valid response"
+        return None, "bunker did not register the request"
 
     try:
         req_id = register_res.json()["id"]
@@ -105,7 +105,11 @@ async def cmd_chapter(message: types.Message):
     latency = int((time.perf_counter() - start_time) * 1000)
 
     if err_reason:
-        await sent_msg.edit_text(BunkerTUI.error(err_reason, latency))
+        diag_nodes = None
+        if any(keyword in err_reason.lower() for keyword in ["unreachable", "connecterror", "no response", "timed out", "timeout", "did not register", "internal error"]):
+            diag_nodes = await is_system_up()
+
+        await sent_msg.edit_text(BunkerTUI.error(err_reason, diag_nodes, latency))
         return
 
     chapter = payload.get("chapter", "unknown")
@@ -133,7 +137,11 @@ async def cmd_pods(message: types.Message, command: CommandObject):
 
     latency = int((time.perf_counter() - start_time) * 1000)
     if err_reason:
-        await sent_msg.edit_text(BunkerTUI.error(err_reason, latency))
+        diag_nodes = None
+        if any(keyword in err_reason.lower() for keyword in ["unreachable", "connecterror", "no response", "timed out", "timeout", "did not register", "internal error"]):
+            diag_nodes = await is_system_up()
+
+        await sent_msg.edit_text(BunkerTUI.error(err_reason, diag_nodes, latency))
         return
 
     msg_text = payload["message"]

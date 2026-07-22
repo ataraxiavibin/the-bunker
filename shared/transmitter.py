@@ -5,19 +5,21 @@ import os
 from datetime import datetime
 from typing import Dict, Any
 from pydantic import BaseModel
-from shared.models import Call, Event
+from shared.models import Call, Event, Intent
 from dotenv import load_dotenv
-from loguru import logger
+from loguru import logger as base_logger
 
+logger = base_logger.bind(module="transm")
 
-logger.add("./logs/transmitter.log", rotation="2 MB", retention="7 days", level="INFO")
+from shared.logger import set_req_id
 
 load_dotenv()
 
-BUNKER_URL = os.environ.get("BUNKER_URL")
-API_TOKEN = os.environ.get("API_TOKEN")
+BUNKER_URL = os.environ["BUNKER_URL"]
+API_TOKEN = os.environ["API_TOKEN"]
 
 async def send_to_bunker(event: Event):
+    set_req_id(event.id)
     headers = {"x-token": API_TOKEN}
     data = event.model_dump(mode="json")
     try:
@@ -30,18 +32,22 @@ async def send_to_bunker(event: Event):
             )
             r.raise_for_status()
     except httpx.HTTPError as e:
-        logger.error(f"Couldn't reach Bunker: {e}")
+        logger.error(f"network failure: {e}")
         return False
     except Exception as e:
-        logger.error(f"Unexpected error: {e}")
+        logger.error(f"unexpected error: {e}")
         return False
 
     return True
 
 async def call_to_bunker(call: Call):
+    set_req_id(call.id)
     headers = {"x-token": API_TOKEN}
     data = call.model_dump()
-    logger.info(f"Calling from {data["caller"]} -> {data["target"]["service"]} to {data["target"]["action"]}")
+
+    dest = f"{call.target.service}:{call.target.action}" if call.target.action else call.target.service
+
+    logger.info(f"transmitting call: {call.caller} -> {dest}")
 
     try:
         async with httpx.AsyncClient() as client:
@@ -53,12 +59,34 @@ async def call_to_bunker(call: Call):
             )
             r.raise_for_status()
     except httpx.HTTPError as e:
-        logger.warning(f"Couldn't reach Bunker: {e}")
+        logger.error(f"network failure: {e}")
         return False
     except Exception as e:
-        logger.warning(f"Failed to send call to bunker: {e}")
+        logger.error(f"unexpected error: {e}")
         return False
 
-    logger.info(f"Returned: {r}")
+    logger.info(f"bunker response received ({r.status_code})")
+    return r
+
+async def get_id(intent: Intent):
+    headers = {"x-token": API_TOKEN}
+
+    try:
+        async with httpx.AsyncClient() as client:
+            r = await client.post(
+                BUNKER_URL+"/register",
+                json=intent.model_dump(),
+                headers=headers,
+                timeout=5,
+            )
+            r.raise_for_status()
+    except httpx.HTTPError as e:
+        logger.error(f"network failure: {e}")
+        return False
+    except Exception as e:
+        logger.error(f"unexpected error: {e}")
+        return False
+
+    # do not log that lol
     return r
 

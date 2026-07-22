@@ -1,11 +1,11 @@
 services:
   bunker:
     build: .
-    command: uvicorn bunker:app --host 0.0.0.0 --port 5050 --reload
-    ports: 
+    command: uvicorn bunker:app --host 0.0.0.0 --port 5050 --reload --reload-exclude "*.log" --reload-exclude "*logs*"
+    ports:
       - "5050:5050"
     restart: unless-stopped
-    volumes: 
+    volumes:
       - .:/app
       - ./logs:/app/logs
     env_file: .env
@@ -17,9 +17,9 @@ services:
 
   bot:
     build: .
-    command: watchfiles --ignore-paths ./logs,./services 'python -m bot.bot' .
+    command: watchfiles --ignore-paths './logs,./services,./*.log,./*.sqlite,./*.db' 'python -m bot.bot' .
     restart: unless-stopped
-    dns: 
+    dns:
       - 8.8.8.8
       - 1.1.1.1
     volumes:

@@ -3,6 +3,7 @@
 import sys
 import contextvars
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING
 from loguru import logger
 
@@ -87,8 +88,11 @@ def setup_logger(module_name: str, log_file: str | None = None):
 
     # log file output
     if log_file:
+        path = Path(log_file)
+        path.parent.mkdir(parents=True, exist_ok=True)
+
         logger.add(
-            log_file,
+            str(path),
             format=formatter,
             rotation="10 MB",
             retention="30 days",

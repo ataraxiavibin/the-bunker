@@ -1,19 +1,15 @@
 # Bunker — requirements
-# generated 2026-05-24
 
 # --- core ---
-fastapi
-uvicorn
-pydantic
-httpx
+fastapi==0.139.2
+uvicorn==0.51.0
+pydantic==2.13.4
+httpx==0.28.1
 
 # --- bot ---
-aiogram==3.28.2
+aiogram==3.29.1
 
-# --- services ---
-schedule
-
-# --- shared ---
-loguru
-python-dotenv
-watchfiles
+# --- shared && tools ---
+loguru==0.7.3
+python-dotenv==1.2.2
+watchfiles==1.2.0

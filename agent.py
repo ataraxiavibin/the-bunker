@@ -9,21 +9,24 @@ import json
 import argparse
 import time
 from datetime import datetime, timezone
-from fastapi import FastAPI, Header, HTTPException, Request
-from pydantic import BaseModel
+from fastapi import FastAPI, Header, HTTPException, Request, Depends
 from typing import Dict, Any, TypedDict, Optional
 from dotenv import load_dotenv
 from loguru import logger
 
-from shared.models import Call, Target, Reply, ReplyOk, ReplyError, Event, EventOk, EventError
-from shared.transmitter import send_to_bunker
+from shared.models import Call, Target, Reply, ReplyOk, ReplyError, Event, EventOk, EventError, Intent
+from shared.transmitter import send_to_bunker, get_id
+from shared.auth import verify_token
+from shared.logger import setup_logger, set_req_id
+
+logger = setup_logger("agent", "./logs/agent.log")
+
 app = FastAPI()
 
 load_dotenv()
 api_token = os.environ.get("API_TOKEN")
 
-logger.remove()
-logger.add("./logs/agent.log", rotation="10 MB", retention="30 days", level="INFO")
+NAME="agent"
 
 # name: path, actions
 MAPPINGS = {
@@ -54,15 +57,14 @@ class ReplyContext:
         # i may use that, but i think it's useless since i get time of the whole request path in bot
         # and only execution time is also better for diagnostics later (maybe add avg exec time in bunker db)
 
-    def fatal(self, reason: str, stderr: str = "", returncode: int = -1, duration_ms: int = 0, payload: dict | None = None, log_details: str = None) -> ReplyError:
-        log_msg = f"[FATAL] {reason} | SERVICE: {self.service}, ACTION: {self.action}, REPLY_TO: {self.call.caller}"
+    def fatal(self, id: str, reason: str, stderr: str = "", returncode: int = -1, duration_ms: int = 0, payload: dict | None = None, log_details: str = None) -> ReplyError:
+        logger.critical(f"fatal error: {reason.lower()}")
 
         if log_details:
-            log_msg += f"\n--- [DEBUG DETAILS] ---\n{log_details}\n------------------"
-
-        logger.error(log_msg)
+            logger.debug(f"fatal dump: {log_details}")
 
         return ReplyError(
+            id=id,
             service=self.service,
             action=self.action,
             reply_to=self.call.caller,
@@ -75,10 +77,11 @@ class ReplyContext:
             payload=payload
         )
 
-    def error(self, reason: str, stderr: str, returncode: int, duration_ms: int, payload: dict | None = None) -> ReplyError:
-        logger.warning(f"[ERROR] {reason} | SERVICE: {self.service}, ACTION: {self.action}, REPLY_TO: {self.call.caller}")
+    def error(self, id: str, reason: str, stderr: str, returncode: int, duration_ms: int, payload: dict | None = None) -> ReplyError:
+        logger.error(f"execution failed: {reason.lower()}")
 
         return ReplyError(
+            id=id,
             service=self.service,
             action=self.action,
             reply_to=self.call.caller,
@@ -91,10 +94,11 @@ class ReplyContext:
             payload=payload
         )
 
-    def ok(self, stderr: str, duration_ms: int, payload: dict) -> ReplyOk:
-        logger.info(f"successfull execution of {self.service}: {self.action} | REPLY_TO: {self.call.caller}")
+    def ok(self, id: str, stderr: str, duration_ms: int, payload: dict) -> ReplyOk:
+        logger.info(f"~~ execution ok ({duration_ms} ms)")
 
         return ReplyOk(
+            id=id,
             service=self.service,
             action=self.action,
             reply_to=self.call.caller,
@@ -112,15 +116,16 @@ class EventContext:
         self.service = target.service
         self.action = target.action or ""
 
-    def fatal(self, reason: str, stderr: str = "", returncode: int = -1, duration_ms: int = 0, payload: Dict | None = None, log_details: str = None) -> EventError:
-        log_msg = f"[FATAL] {reason} | SERVICE: {self.service}, ACTION: {self.action}"
+    def fatal(self, id: str, reason: str, stderr: str = "", returncode: int = -1, duration_ms: int = 0, payload: Dict | None = None, log_details: str = None) -> EventError:
+        logger.critical(f"event fatal: {reason.lower()}")
 
         if log_details:
-            log_msg += f"\n--- [DEBUG DETAILS] ---\n{log_details}\n------------------"
+            logger.debug(f"event dump: {log_details}")
 
         logger.error(log_msg)
 
         return EventError(
+            id=id,
             service=self.service,
             action=self.action,
             status="fatal",
@@ -132,10 +137,11 @@ class EventContext:
             payload=payload
         )
 
-    def error(self, reason: str, stderr: str, returncode: int, duration_ms: int, payload: dict | None = None) -> EventError:
-        logger.warning(f"[ERROR] {reason} | SERVICE: {self.service}, ACTION: {self.action}")
+    def error(self, id: str, reason: str, stderr: str, returncode: int, duration_ms: int, payload: dict | None = None) -> EventError:
+        logger.error(f"event failed: {reason.lower()}")
 
         return EventError(
+            id=id,
             service=self.service,
             action=self.action,
             status="error",
@@ -147,10 +153,11 @@ class EventContext:
             payload=payload
         )
 
-    def ok(self, stderr: str, duration_ms: int, payload: dict) -> EventOk:
-        logger.info(f"successfull execution of {self.service}: {self.action}") # yeah, not really clear how does one see that it's event, not reply.
+    def ok(self, id: str, stderr: str, duration_ms: int, payload: dict) -> EventOk:
+        logger.info(f"~~ event ok ({duration_ms} ms)")
 
         return EventOk(
+            id=id,
             service=self.service,
             action=self.action,
             status="ok",
@@ -164,6 +171,7 @@ class EventContext:
 async def execute_service(cmd: list, timeout: float = 15.0) -> ExecutionResult:
     start_time = time.perf_counter()
     proc = None
+    cmd_str = " ".join(cmd)
 
     try:
         proc = await asyncio.create_subprocess_exec(
@@ -182,7 +190,7 @@ async def execute_service(cmd: list, timeout: float = 15.0) -> ExecutionResult:
         returncode = proc.returncode
         duration_ms = int((time.perf_counter() - start_time) * 1000)
 
-        logger.debug(f"successfully ran {cmd}.")
+        logger.debug(f"process finished {cmd_str}.")
         return ExecutionResult(
             stdout=stdout,
             stderr=stderr,
@@ -198,7 +206,7 @@ async def execute_service(cmd: list, timeout: float = 15.0) -> ExecutionResult:
             except ProcessLookupError:
                 pass
 
-        logger.error(f"Service timed out | CMD: {cmd}\n{e}")
+        logger.error(f"process timed out ({timeout}s): {cmd_str}")
 
         duration_ms = int((time.perf_counter() - start_time) * 1000)
         return ExecutionResult(
@@ -216,7 +224,8 @@ async def execute_service(cmd: list, timeout: float = 15.0) -> ExecutionResult:
             except ProcessLookupError:
                 pass
 
-        logger.error(f"OS-level execution failure for {cmd}: {type(e).__name__}: {e}")
+        logger.error(f"os execution failure: {type(e).__name__.lower()} | {cmd_str}") # maybe get rid of that pipe cuz it doesn't follow the stylistics
+        logger.debug(f"os-error dump: {e}")
 
         if isinstance(e, FileNotFoundError):
             reason = "executable file not found."
@@ -236,24 +245,21 @@ async def execute_service(cmd: list, timeout: float = 15.0) -> ExecutionResult:
 
 
 
-@app.post("/call")
+@app.post("/call", dependencies=[Depends(verify_token)])
 async def run_call(call: Call, request: Request, x_token: str = Header(...)) -> Reply:
-    if x_token != api_token:
-        logger.warning(f"Failed auth attempt from '{request.client.host}'")
-        raise HTTPException(status_code=403, detail="Forbidden")
-
     ctx = ReplyContext(call)
     target = call.target
+    req_id = call.id
 
-    logger.info(f"Received call: '{target.action}' on {target.service} for {call.caller}.")
+    set_req_id(req_id)
+
+    logger.info(f"^_> received call: {call.caller} -> {target.service}:{target.action}")
 
     if target.service not in MAPPINGS:
-        return ctx.fatal(f"service '{target.service}' not found.")
+        return ctx.fatal(id=req_id, reason=f"service '{target.service}' not found.")
 
     if target.action not in MAPPINGS[target.service]["actions"]:
-        return ctx.fatal(f"action '{target.action}' not found in '{target.service}' service.")
-
-    logger.info(f"Executing '{target.action}' on {target.service} for {call.caller}.")
+        return ctx.fatal(id=req_id, reason=f"action '{target.action}' not found in '{target.service}' service.")
 
     # use subprocess to make the system language-agnostic.
     cmd = [sys.executable, "-m", MAPPINGS[target.service]["path"], target.action]
@@ -270,25 +276,24 @@ async def run_call(call: Call, request: Request, x_token: str = Header(...)) -> 
 
     # 1. guarantee, that stdout is there
     if not stdout:
-        return ctx.fatal(reason or "service returned empty stdout", stderr=stderr, returncode=returncode, duration_ms=duration_ms)
+        return ctx.fatal(id=req_id, reason=reason or "service returned empty stdout", stderr=stderr, returncode=returncode, duration_ms=duration_ms)
 
     # 2. guarantee, that stdout is json
     try:
         parsed_stdout = json.loads(stdout)
     except json.JSONDecodeError as e:
-        return ctx.fatal(f"an error occured while parsing json", stderr=stderr, returncode=returncode, duration_ms=duration_ms, log_details=stdout)
+        return ctx.fatal(id=req_id, reason=f"an error occured while parsing json", stderr=stderr, returncode=returncode, duration_ms=duration_ms, log_details=stdout)
 
     # 3. if there's stdout, it's json.
     if returncode == 0:
-        return ctx.ok(stderr=stderr, duration_ms=duration_ms, payload=parsed_stdout)
+        return ctx.ok(id=req_id, stderr=stderr, duration_ms=duration_ms, payload=parsed_stdout)
     else:
         if not reason and stderr:
             reason = stderr.strip().split('\n')[-1][:100]
         if not reason:
             reason = parsed_stdout.get("message", f"service exited with {returncode}") # in case of failure, services should print in stdout reason in "message"?
 
-        logger.warning(f"Error from service {target.service}: {target.action} | REASON: {reason}, REPLY_to: {call.caller}")
-        return ctx.error(stderr=stderr, returncode=returncode, reason=reason, duration_ms=duration_ms, payload=parsed_stdout)
+        return ctx.error(id=req_id, stderr=stderr, returncode=returncode, reason=reason, duration_ms=duration_ms, payload=parsed_stdout)
 
 
 async def handle_cli():
@@ -310,6 +315,15 @@ async def handle_cli():
     args = parser.parse_args()
 
     target = Target(service=args.service, action=args.action)
+    intent = Intent(caller=NAME, target=target)
+
+    register_res = await get_id(intent)
+
+    if not register_res:
+        print("couldn't resolve id for the request")
+        sys.exit(1)
+
+    req_id = register_res.json()["id"]
 
     ctx = EventContext(target)
 
@@ -335,14 +349,14 @@ async def handle_cli():
     if not stdout:
         fail_reason = reason or "service returned no stdout"
         print(f"{fail_reason} | stderr: {stderr}, exit code: {returncode}")
-        ctx.fatal(reason=fail_reason, stderr=stderr, returncode=returncode, duration_ms=duration_ms)
+        ctx.fatal(id=req_id, reason=fail_reason, stderr=stderr, returncode=returncode, duration_ms=duration_ms)
         sys.exit(1) # service exit code doesn't matter, since service doesn't follow the systems contract
 
     try:
         parsed_stdout = json.loads(stdout)
     except json.JSONDecodeError as e:
         print(f"json parse error: {e}, stdout: {stdout}")
-        ctx.fatal(f"an error occured while parsing json", stderr=stderr, returncode=returncode, duration_ms=duration_ms, log_details=stdout)
+        ctx.fatal(id=req_id, reason=f"an error occured while parsing json", stderr=stderr, returncode=returncode, duration_ms=duration_ms, log_details=stdout)
         sys.exit(1)
 
     # from now we're sure that parsed_stdout exists and it's valid json
@@ -355,18 +369,16 @@ async def handle_cli():
 
     print(msg)
     if returncode == 0:
-        event = ctx.ok(stderr=stderr, duration_ms=duration_ms, payload=parsed_stdout)
+        event = ctx.ok(id=req_id, stderr=stderr, duration_ms=duration_ms, payload=parsed_stdout)
     else:
         if not reason and stderr:
             reason = stderr.strip().split('\n')[-1][:100]
         if not reason:
             reason = parsed_stdout.get("message", f"service exited with {returncode}") # in case of failure, services should print in stdout reason in "message"?
-        event = ctx.error(reason=reason, stderr=stderr, returncode=returncode, duration_ms=duration_ms, payload=parsed_stdout)
-
-
+        event = ctx.error(id=req_id, reason=reason, stderr=stderr, returncode=returncode, duration_ms=duration_ms, payload=parsed_stdout)
 
     if not await send_to_bunker(event):
-        logger.critical(f"Couldn't send Event to Bunker: {event}") # maybe add queuing, so I don't lose info in logs. for future at least
+        logger.error(f"failed to send event to bunker") # maybe add queuing, so I don't lose info in logs. for future at least
     sys.exit(returncode or 0)
 
 

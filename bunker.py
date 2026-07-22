@@ -2,15 +2,18 @@
 
 import os
 import httpx
-from fastapi import FastAPI, Header, HTTPException, Request
-from pydantic import BaseModel
-from typing import Dict, Any
+import secrets
+from fastapi import FastAPI, Header, HTTPException, Request, Depends
+from typing import Dict, Any, Union
 from dotenv import load_dotenv
 from loguru import logger
+from pydantic import ValidationError
 
-from shared.models import Event, Call, Reply, Target
+from shared.models import Event, Call, Target, Intent, Reply, ReplyOk, ProcessedReplyOk, ProcessedReplyError, ProcessedReply, ReplyAdapter, BunkerError
+from shared.logger import setup_logger, set_req_id
+from shared.auth import verify_token
 
-logger.add("./logs/bunker.log", rotation="10 MB", retention="30 days", level="INFO")
+logger = setup_logger("bunker", "./logs/bunker.log")
 
 app = FastAPI()
 
@@ -18,41 +21,80 @@ load_dotenv()
 api_token = os.environ.get("API_TOKEN")
 agent_url = os.environ.get("AGENT_URL")
 
+# log everything, scrape anything not in ProcessedReply
+async def process_reply(reply: Reply) -> ProcessedReply:
+    logger.info(f"^_> processing reply: {reply.status}")
+    logger.debug(f"~~ reply dump: {reply}")
 
-@app.post("/event")
-async def handle_event(event: Event, request: Request, x_token: str = Header(...)) -> Dict[str, str]:
-    if x_token != api_token:
-        logger.warning(f"Failed auth attempt from {request.client.host}")
-        raise HTTPException(status_code=403, detail="Forbidden")
+    # here db logic; a new func call
+    # if reply.status == "fatal": notes = ...
 
-    logger.info(f"Event from {event.service}: STATUS - {event.status} | PAYLOAD - {event.payload}")
+    if isinstance(reply, ReplyOk):
+        processed = ProcessedReplyOk(
+            duration_ms=reply.duration_ms,
+            payload=reply.payload
+        )
+    else: # ReplyError
+        processed = ProcessedReplyError(
+            status=reply.status,
+            duration_ms=reply.duration_ms,
+            reason=reply.reason or "service died mid-process.", # let's see how accurate this is, should be pretty accurate and never false
+            payload=reply.payload
+        )
+
+    return processed
+
+@app.post("/event", dependencies=[Depends(verify_token)])
+async def handle_event(event: Event) -> Dict[str, str]:
+    set_req_id(event.id)
+
+    logger.info(f"~~ event received: {event.service} finished with status {event.status}")
+    logger.debug(f"~~ payload: {event.payload}")
 
     return {"status": "accepted"}
 
 @app.get("/ping")
-async def handle_ping():
-    logger.debug("Got ping")
+async def ping():
+    logger.debug("~~ received ping.")
     return {"status": "alive"}
 
-@app.post("/call")
-async def forward_call(call: Call, request: Request, x_token: str = Header(...)) -> Dict[str, Any]:
-    if x_token != api_token:
-        logger.warning(f"Failed auth attempt from {request.client.host}")
-        raise HTTPException(status_code=403, detail="Forbidden")
+@app.post("/register", dependencies=[Depends(verify_token)])
+async def register(intent: Union[Intent, Target]) -> Dict[str, str]:
+    # generate a request id
+    req_id = secrets.token_hex(3)
 
-    logger.info(f"Call from {call.caller} to {call.target.service}: ACTION - {call.target.action}")
+    # set contextvar of this request
+    set_req_id(req_id)
 
-    headers = {"x-token": api_token}
-    data = {
-        "caller": call.caller,
-        "target": call.target.model_dump()
-    }
+    # extract the info
+    caller = intent.caller if isinstance(intent, Intent) else "agent"
+    target = intent.target if isinstance(intent, Intent) else intent
+
+    # construct the destination (either service with action, or just service)
+    dest = f"{target.service}:{target.action}" if target.action else target.service
+
+    logger.info(f"~~ registered intent: {caller} -> {dest}")
+
+    # when automatic scanning implemented, validate the intent
+
+    # return the id to the caller
+    return {"id": req_id}
+
+
+@app.post("/call", dependencies=[Depends(verify_token)])
+async def forward_call(call: Call) -> ProcessedReply | BunkerError:
+    set_req_id(call.id)
+
+    dest = f"{call.target.service}:{call.target.action}" if call.target.action else call.target.service
+    logger.info(f"^_> forward call: {call.caller} -> {dest}")
+
+    headers = {"x-token": api_token or ""}
 
     try:
         async with httpx.AsyncClient() as client:
             result = await client.post(
                 f"{agent_url}/call",
-                json=data,
+                json=call.model_dump(),
                 headers=headers,
                 timeout=20.0
             )
@@ -61,31 +103,36 @@ async def forward_call(call: Call, request: Request, x_token: str = Header(...))
         agent_data = result.json()
 
     except httpx.TimeoutException as e:
-        logger.warning(f"Request timed out: {e}")
-        raise HTTPException(status_code=504, detail="Agent did not reply in time")
-    except httpx.HTTPError as e:
-        logger.warning(f"Couldn't reach agent.py: {e}")
-        raise HTTPException(status_code=502, detail="Agent is unreachable")
+        msg=f"request timed out"
+        logger.warning(msg)
+        return BunkerError(reason=msg)
+    except httpx.HTTPStatusError as e:
+        msg=f"unreachable: http {e.response.status_code}"
+        logger.warning(msg)
+        return BunkerError(reason=msg)
     except Exception as e:
-        logger.warning(f"Unexpected error: {e}")
-        raise HTTPException(status_code=500, detail="Internal Error")
+        msg=f"unexpected error: {type(e).__name__}"
+        logger.warning(msg)
+        return BunkerError(reason=msg)
+
+    logger.info(f"~~ agent reply received")
+    logger.debug(f"~~ agent reply dump: {agent_data}")
 
     try:
-        status = agent_data["status"]
-        payload = agent_data["payload"]
-    except (KeyError, TypeError) as e:
-        logger.error(f"Something is wrong with the payload: {agent_data} | exception: {e}")
-        raise HTTPException(status_code=400, detail="Something went wrong on agent/service side. Check logs/bunker.log")
+        reply_obj = ReplyAdapter.validate_python(agent_data)
+    except ValidationError as e:
+        msg=f"agent data validation failed: {e}"
+        logger.critical(msg)
+        return BunkerError(reason=msg)
 
-    logger.info(f"Got back reply: {agent_data}")
-    logger.info(f"Sent back payload to {call.caller}: {payload}")
-    if status == "fatal":
-        reason = payload.get("reason", "Unknown agent error")
-        raise HTTPException(status_code=400, detail=reason)
+    processed = await process_reply(reply_obj)
 
-    return payload
+    logger.info(f"~~ reply sent: {call.caller} -> {reply_obj.payload.get("message", "empty").lower()}")
+
+    return processed
 
 
 if __name__ == "__main__":
     import uvicorn
+    logger.info("starting...")
     uvicorn.run(app, host="0.0.0.0", port=5050)

@@ -1,4 +1,4 @@
-# connection.py 
+# connection.py
 #
 # checks, if bunker exists..
 
@@ -19,7 +19,7 @@ async def _check_url(client: httpx.AsyncClient, url: str, timeout: int) -> bool:
     except httpx.RequestError:
         return False
 
-async def is_system_up(timeout: int = 3) -> dict[str, bool]:
+async def is_system_up(timeout: int = 1) -> dict[str, bool]:
     # easily extendable
     endpoints = {
         "bunker": f"{BUNKER_URL}/ping",
@@ -43,7 +43,7 @@ async def check_connection():
     for key, is_up in status.items():
         msg = "is running." if is_up else "is offline."
         print(f"{key} {msg}")
-    
+
 
 
 if __name__ == "__main__":

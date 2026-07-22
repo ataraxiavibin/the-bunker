@@ -77,7 +77,7 @@ async def get_id(intent: Intent):
                 BUNKER_URL+"/register",
                 json=intent.model_dump(),
                 headers=headers,
-                timeout=5,
+                timeout=2,
             )
             r.raise_for_status()
     except httpx.HTTPError as e:

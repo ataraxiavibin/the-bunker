@@ -106,6 +106,10 @@ async def forward_call(call: Call) -> ProcessedReply | BunkerError:
         msg=f"request timed out"
         logger.warning(msg)
         return BunkerError(reason=msg)
+    except httpx.ConnectError as e:
+        msg = f"agent is unreachable: connection failed"
+        logger.warning(msg)
+        return BunkerError(reason=msg)
     except httpx.HTTPStatusError as e:
         msg=f"unreachable: http {e.response.status_code}"
         logger.warning(msg)
@@ -113,6 +117,7 @@ async def forward_call(call: Call) -> ProcessedReply | BunkerError:
     except Exception as e:
         msg=f"unexpected error: {type(e).__name__}"
         logger.warning(msg)
+        logger.debug(f"error dump: {e}")
         return BunkerError(reason=msg)
 
     logger.info(f"~~ agent reply received")
